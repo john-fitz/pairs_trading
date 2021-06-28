@@ -69,7 +69,7 @@ def potential_trades_status(coin_pairs: list, df: pd.DataFrame) -> pd.DataFrame:
 
     return potential_trades
 
-def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_market_info: pd.DataFrame, test_mode: Optional[bool]=False, test_time: Optional[float]=None) -> pd.DataFrame:
+def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_market_info: pd.DataFrame, fictional: bool, test_mode: Optional[bool]=False, test_time: Optional[float]=None) -> pd.DataFrame:
     """Grabs the open positions from the log, updates them and adds logic whether they should be sold
 
     Parameters
@@ -80,6 +80,8 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         information on potential trades to open - output from potential_trades_status function
     full_market_info : pd.DataFrame
         DataFrame consisting of historical market pricing
+    fictional : bool
+        whether teh log provided is fictional or actual
     test_mode : bool, optional
         flag for whether this is being run in production or for testing (default option is False)
     test_time:
@@ -145,7 +147,7 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
             #     open_positions.loc[index, 'sell_reason'] = 'no longer cointegrated'
 
     open_positions.dropna(subset = ["coin1"], inplace=True)    
-    open_positions.to_csv(log_name(fictional=False, test_mode=test_mode, open_position=True), index=False)
+    open_positions.to_csv(log_name(fictional=fictional, test_mode=test_mode, open_position=True), index=False)
     return open_positions
 
 
@@ -227,8 +229,8 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
     
     potential_buys = potential_trades[(potential_trades['coin1_long'] == True) | (potential_trades['coin2_long'] == True)]
     
-    actual_open_positions = update_open_positions(actual_log, potential_trades, full_market_info, test_mode=test_mode, test_time=test_time)
-    fictional_open_positions = update_open_positions(fictional_log, potential_trades, full_market_info, test_mode=test_mode, test_time=test_time)
+    actual_open_positions = update_open_positions(actual_log, potential_trades, full_market_info, fictional=False, test_mode=test_mode, test_time=test_time)
+    fictional_open_positions = update_open_positions(fictional_log, potential_trades, full_market_info, fictional=True, test_mode=test_mode, test_time=test_time)
     # print('inside trading function')
 
     # identify buys
