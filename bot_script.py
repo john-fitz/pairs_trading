@@ -44,7 +44,7 @@ def testing_trading_bot():
             
 
             # to do weekly
-            if i % 168 == 0 and day > 1:
+            if i % 168 == 0 and day > 2:
                 weeks += 1
                 trades = pd.read_csv('testing_trade_log.csv')
                 current_profit = sum(trades[(trades['current_position'] == 'closed') & (trades['exit_time'] >= times[i - 168])]['profit'])

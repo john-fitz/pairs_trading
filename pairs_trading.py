@@ -144,13 +144,8 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
             # elif not_cointegrated:
             #     open_positions.loc[index, 'sell_reason'] = 'no longer cointegrated'
 
-            
-     
     open_positions.dropna(subset = ["coin1"], inplace=True)    
-    if test_mode:            
-        open_positions.to_csv('testing_open_positions.csv', index=False)
-    else:
-        open_positions.to_csv('open_positions.csv', index=False)
+    open_positions.to_csv(log_name(fictional=False, test_mode=test_mode), index=False)
     return open_positions
 
 
@@ -192,16 +187,7 @@ def update_log(log: pd.DataFrame, open_positions: pd.DataFrame, fictional: bool,
         
         log.dropna(subset = ["coin1"], inplace=True)
 
-    if fictional:
-        if test_mode:
-            log.to_csv('testing_fictional_trade_log.csv', index=False)
-        else:
-            log.to_csv('fictional_trade_log.csv', index=False)
-    else:
-        if test_mode:
-            log.to_csv('testing_trade_log.csv', index=False)
-        else:
-            log.to_csv('trade_log.csv', index=False)
+    log.to_csv(log_name(fictional=fictional, test_mode=test_mode), index=False)
 
     return None
 
@@ -241,7 +227,8 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
     
     potential_buys = potential_trades[(potential_trades['coin1_long'] == True) | (potential_trades['coin2_long'] == True)]
     
-    open_positions = update_open_positions(actual_log, potential_trades, full_market_info, test_mode=test_mode, test_time=test_time)
+    actual_open_positions = update_open_positions(actual_log, potential_trades, full_market_info, test_mode=test_mode, test_time=test_time)
+    fictional_open_positions = update_open_positions(fictional_log, potential_trades, full_market_info, test_mode=test_mode, test_time=test_time)
     # print('inside trading function')
 
     # identify buys
@@ -302,22 +289,23 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                 fictional_log = fictional_log.append(trade, ignore_index=True)
         
     # sell
-    for index, row in open_positions.iterrows():
-        row_info = row.to_dict()
-        if row_info['suggested_move'] == 'sell':
-            print('closing position for  {} and {}'.format(row_info['coin1'], row_info['coin2']))
-            # if row_info['coin1_long']:
-            #     print('closing long positions of {} units of {} at ${} and short position of {} units of {} at ${}'.format(row_info['coin1_amt'], row_info['coin1'], row_info['coin1_exit_price'], row_info['coin2_amt'], row_info['coin2'], row_info['coin2_exit_price']))
-            # else:
-            #     print('closing long positions of {} units of {} at ${} and short position of {} units of {} at ${}'.format(row_info['coin2_amt'], row_info['coin2'], row_info['coin2_exit_price'], row_info['coin1_amt'], row_info['coin1'], row_info['coin1_exit_price']))
+    for open_positions in [actual_open_positions, fictional_open_positions]
+        for index, row in open_positions.iterrows():
+            row_info = row.to_dict()
+            if row_info['suggested_move'] == 'sell':
+                print('closing position for  {} and {}'.format(row_info['coin1'], row_info['coin2']))
+                # if row_info['coin1_long']:
+                #     print('closing long positions of {} units of {} at ${} and short position of {} units of {} at ${}'.format(row_info['coin1_amt'], row_info['coin1'], row_info['coin1_exit_price'], row_info['coin2_amt'], row_info['coin2'], row_info['coin2_exit_price']))
+                # else:
+                #     print('closing long positions of {} units of {} at ${} and short position of {} units of {} at ${}'.format(row_info['coin2_amt'], row_info['coin2'], row_info['coin2_exit_price'], row_info['coin1_amt'], row_info['coin1'], row_info['coin1_exit_price']))
 
-            open_positions.loc[index, 'coin2_exit_price'] = row_info['coin2_price']
-            open_positions.loc[index, 'coin1_exit_price'] = row_info['coin1_price']
-            open_positions.loc[index, 'exit_time'] = test_time if test_mode else round(time.time() * 1000)
-            open_positions.loc[index, 'current_position'] = 'closed'
+                open_positions.loc[index, 'coin2_exit_price'] = row_info['coin2_price']
+                open_positions.loc[index, 'coin1_exit_price'] = row_info['coin1_price']
+                open_positions.loc[index, 'exit_time'] = test_time if test_mode else round(time.time() * 1000)
+                open_positions.loc[index, 'current_position'] = 'closed'
                                                                 
-    update_log(actual_log, open_positions, test_mode)
-    update_log(actual_log, open_positions, test_mode)
+    update_log(actual_log, actual_open_positions, test_mode)
+    update_log(fictional_log, fictional_open_positions, test_mode)
     
     return None
 
@@ -332,7 +320,7 @@ def halt_actual_trading(fictional_log: pd.DataFrame) -> bool:
 
     bad_trades = 0
     num_trades = 0
-    for index, row in last_week_trades.iterrows():
+    for _, row in last_week_trades.iterrows():
         num_trades += 1
         entry_amt = row['coin1_entry_price'] * row['coin1_amt'] + row['coin2_entry_price'] * row['coin2_amt'] 
         loss_pct = row['profit'] / entry_amt
@@ -347,13 +335,8 @@ def halt_actual_trading(fictional_log: pd.DataFrame) -> bool:
 def build_trade_log(test_mode: Optional[bool]=False) -> Union[pd.DataFrame, pd.DataFrame]:
     """returns the trade log if a CSV is found, otherwise it creates a new DataFrame to return"""
     try:
-        if test_mode:
-            actual_log = pd.read_csv('testing_trade_log.csv')
-            fictional_log = pd.read_csv('testing_fictional_trade_log.csv')
-
-        else:
-            actual_log = pd.read_csv('trade_log.csv')
-            fictional_log = pd.read_csv('fictional_trade_log.csv')
+        actual_log = pd.read_csv(log_name(fictional=False, test_mode=test_mode))
+        fictional_log = pd.read_csv(log_name(fictional=True, test_mode=test_mode))
     
     except:
         trade_log_columns = ['coin1', 'coin2', 'entry_condition', 'exit_mean', 'coin1_amt', 'coin2_amt', 'coin1_long', 'coin2_long',
@@ -364,3 +347,14 @@ def build_trade_log(test_mode: Optional[bool]=False) -> Union[pd.DataFrame, pd.D
         fictional_log = pd.DataFrame(columns=trade_log_columns)
     
     return actual_log, fictional_log
+
+def log_name(fictional: bool, test_mode: bool) -> str:
+    """determines the correct csv title for the log"""
+    log_title = ""
+    if fictional:
+        log_title += 'fictional_'
+    if test_mode:
+        log_title += 'testing_'
+    
+    log_title += 'trade_log.csv'
+    return log_title
