@@ -1,0 +1,5 @@
+*.csv
+*.ipynb
+data/
+__pycache__/
+*.txt
