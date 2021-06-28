@@ -241,13 +241,19 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
         # if we should buy it, then check and execute trade
         if row_info['coin1_long'] or row_info['coin2_long']:
             # identify positions with those coins. Checks both entries in case the coins are flipped
-            relevant_positions = open_positions[((open_positions['coin1'] == row_info['coin1']) & 
-                                              (open_positions['coin2'] == row_info['coin2'])) | 
-                                              ((open_positions['coin1'] == row_info['coin2']) & 
-                                              (open_positions['coin1'] == row_info['coin1']))]
+            relevant_fictional_positions = fictional_open_positions[((fictional_open_positions['coin1'] == row_info['coin1']) & 
+                                              (fictional_open_positions['coin2'] == row_info['coin2'])) | 
+                                              ((fictional_open_positions['coin1'] == row_info['coin2']) & 
+                                              (fictional_open_positions['coin1'] == row_info['coin1']))]
+            
+            relevant_actual_positions = actual_open_positions[((actual_open_positions['coin1'] == row_info['coin1']) & 
+                                              (actual_open_positions['coin2'] == row_info['coin2'])) | 
+                                              ((actual_open_positions['coin1'] == row_info['coin2']) & 
+                                              (actual_open_positions['coin1'] == row_info['coin1']))]
+
 
             # if we haven't traded those coins in the past or all past positions are closed
-            if len(relevant_positions) == 0:
+            if len(relevant_fictional_positions) == 0 or len(relevant_actual_positions) == 0:
                 trade = {}
                 trade['coin1'] = row_info['coin1']
                 trade['coin2'] = row_info['coin2']
@@ -283,13 +289,14 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                 # else:
                 #     print('going long {} units of {} at ${} and short {} units of {} at ${}'.format(trade['coin2_amt'], trade['coin2'], coin2_price, trade['coin1_amt'], trade['coin1'], coin1_price))
                
-                if not halt_actual:
+                if not halt_actual and len(relevant_actual_positions) == 0:
                     actual_log = actual_log.append(trade, ignore_index=True)
                 
-                fictional_log = fictional_log.append(trade, ignore_index=True)
+                if len(relevant_fictional_positions) == 0:
+                    fictional_log = fictional_log.append(trade, ignore_index=True)
         
     # sell
-    for open_positions in [actual_open_positions, fictional_open_positions]
+    for open_positions in [actual_open_positions, fictional_open_positions]:
         for index, row in open_positions.iterrows():
             row_info = row.to_dict()
             if row_info['suggested_move'] == 'sell':

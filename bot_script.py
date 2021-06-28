@@ -19,9 +19,6 @@ def testing_trading_bot():
     pairs = pd.DataFrame()
 
     full_market_info = pd.read_csv('data/full_data.csv', index_col=0)
-    if len(full_market_info) == 0:
-        print('not reading in csv correctly')
-        return None
     
     times = full_market_info[full_market_info['coin'] == 'SANDBTC']['close_time'].values
     for i in range(start_period, len(times)):
