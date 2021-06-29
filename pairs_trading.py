@@ -21,7 +21,7 @@ from typing import Optional, Union
 
 PORTFOLIO_VALUE = 10000
 TRADE_AMT_DEFAULT = PORTFOLIO_VALUE * 0.05
-MAX_LOSS = -1 * (PORTFOLIO_VALUE * 0.01)
+MAX_LOSS = -1 * (PORTFOLIO_VALUE * 0.03)
 
 def potential_trades_status(coin_pairs: list, df: pd.DataFrame) -> pd.DataFrame:
     """Goes through the list of potential coins and determines whether they should be traded
@@ -93,7 +93,7 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         updated information on prices, profit, whether they should sell, etc for open positions
     """
 
-    open_positions = log[log['current_position'] == 'open']
+    open_positions = log[log['current_position'] == 'open'].copy()
     
     for index, row in open_positions.iterrows():
         row_info = row.to_dict()
@@ -105,7 +105,8 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
             now = round(time.time() * 1000)
         
         open_days = (now - row_info['entry_time']) // 86400000
-        open_positions.loc[index, 'open_days'] = open_days
+        print(f"open_days = {open_days}")
+        open_positions.at[index, 'open_day_count'] = open_days
         coin1 = row_info['coin1']
         coin2 = row_info['coin2']
         
@@ -113,8 +114,8 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         current_diff = diff.values[-1]
         coin1_price = np.exp(coin1_pricing.values[-1])
         coin2_price = np.exp(coin2_pricing.values[-1])
-        open_positions.loc[index, 'coin1_price'] = coin1_price
-        open_positions.loc[index, 'coin2_price'] = coin2_price
+        open_positions.at[index, 'coin1_price'] = coin1_price
+        open_positions.at[index, 'coin2_price'] = coin2_price
         
         short1_hedge = -row_info['hedge_ratio'] if row_info['coin1_long'] == False else 1
         short2_hedge = -row_info['hedge_ratio'] if row_info['coin2_long'] == False else 1
@@ -122,7 +123,7 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         profit1 = (row_info['coin1_entry_price'] - coin1_price) * row_info['coin1_amt'] * short1_hedge
         profit2 = (row_info['coin2_entry_price'] - coin2_price) * row_info['coin2_amt'] * short2_hedge
         current_profit = profit1 + profit2
-        open_positions.loc[index, 'profit'] = current_profit
+        open_positions.at[index, 'profit'] = current_profit
         
         # if not cointegratred anymore, we shouldn't hold onto it
         relevant_positions1 = potential_buys[((potential_buys['coin1'] == coin1) & (potential_buys['coin2'] == coin2))]
@@ -134,15 +135,15 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         condition = 'above' if current_diff >= row_info['exit_mean'] else 'below'
         
         if open_days >= 10 or current_profit < MAX_LOSS or row_info['entry_condition'] != condition: #or not_cointegrated:
-            open_positions.loc[index, 'suggested_move'] = 'sell'
+            open_positions.at[index, 'suggested_move'] = 'sell'
 
             if open_days >= 10:
-                open_positions.loc[index, 'sell_reason'] = 'exceeds hold period'
+                open_positions.at[index, 'sell_reason'] = 'exceeds hold period'
             elif current_profit < MAX_LOSS:
-                open_positions.loc[index, 'sell_reason'] = 'stop loss'
+                open_positions.at[index, 'sell_reason'] = 'stop loss'
 
             elif row_info['entry_condition'] != condition:
-                open_positions.loc[index, 'sell_reason'] = 'mean reverted'
+                open_positions.at[index, 'sell_reason'] = 'mean reverted'
             # elif not_cointegrated:
             #     open_positions.loc[index, 'sell_reason'] = 'no longer cointegrated'
 
@@ -178,15 +179,18 @@ def update_log(log: pd.DataFrame, open_positions: pd.DataFrame, fictional: bool,
         coin1 = open_positions.loc[index, 'coin1']
         coin2 = open_positions.loc[index, 'coin2']
 
-        log_row = log[(log['coin1'] == coin1) & (log['coin2'] == coin2) & (log['current_position'] == 'open')]
-        if len(log_row) == 0:
+        open_log = log[(log['coin1'] == coin1) & (log['coin2'] == coin2) & (log['current_position'] == 'open')]
+        # no matching open positions exist so we add it
+        if len(open_log) == 0:
             log = log.append(row_info, ignore_index=True)
+        # already exists, so we delete the old info and append the new
         else:
-            row_index = log[(log['coin1'] == coin1) & (log['coin2'] == coin2) & (log['current_position'] == 'open')].index.values.astype(int)[0]
+            row_index = open_log.index.values.astype(int)[0]
             log = log.drop(index=row_index)
             log = log.append(row_info, ignore_index=True)
 
-        
+        # print(f"open day_count: {row_info['open_day_count']}")
+        # clean up dataframe
         log.dropna(subset = ["coin1"], inplace=True)
 
     log.to_csv(log_name(fictional=fictional, test_mode=test_mode, open_position=False), index=False)
@@ -227,9 +231,15 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
     else:
         test_time = full_market_info['close_time'].iloc[-1]
     
+    print(str(test_time))
+    
     potential_buys = potential_trades[(potential_trades['coin1_long'] == True) | (potential_trades['coin2_long'] == True)]
     
     actual_open_positions = update_open_positions(actual_log, potential_trades, full_market_info, fictional=False, test_mode=test_mode, test_time=test_time)
+    # try:
+    #     print(f"actual open day count: {actual_open_positions['open_day_count'].values}")
+    # except:
+    #     print("can't print open days")
     fictional_open_positions = update_open_positions(fictional_log, potential_trades, full_market_info, fictional=True, test_mode=test_mode, test_time=test_time)
     # print('inside trading function')
 
@@ -282,7 +292,7 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                 trade['profit'] = 0
                 trade['suggested_move'] = 'hold'
                 trade['hedge_ratio'] = row_info['hedge_ratio']
-                trade['sell_reason'] = None
+                trade['sell_reason'] = ""
 
                 print('opening position for {} and {}'.format(trade['coin1'], trade['coin2']))
                 # if row_info['coin1_long']:

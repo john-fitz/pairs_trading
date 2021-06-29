@@ -60,15 +60,13 @@ def testing_trading_bot():
             
             # information up until the day before to not bias collection of potential pairs
             previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - two_months])]
-            
             # past info up to current time
-            market_info = full_market_info[full_market_info['close_time'] > times[i - two_months]]
             # potential_candidates = list(pairs_helpers.potential_pairs(previous_info, 2).keys())
             potential_candidates = pairs.get(times[i])
             if potential_candidates == None:
                 print('not gathering pairs correctly for backtesting')
 
-    #         # to do weekly
+            # to do weekly
             if i % 168 == 0 and day > 2:
                 weeks += 1
                 trades = pd.read_csv('testing_trade_log.csv')
@@ -78,7 +76,8 @@ def testing_trading_bot():
                 time_holder = datetime.now()
                 
     
-    #     #opening log
+        # opening log
+        market_info = full_market_info[(full_market_info['close_time'] < times[i]) & (full_market_info['close_time'] > times[i - two_months])]
         actual_log, fictional_log = pairs_trading.build_trade_log(True)
         potential_trades = pairs_trading.potential_trades_status(potential_candidates, market_info)
         pairs_trading.pseudo_trade(actual_log, fictional_log, potential_trades, market_info, test_mode=True)
