@@ -47,7 +47,7 @@ def testing_trading_bot():
     full_market_info = pd.read_csv('data/Anna_coins_full_data.csv', index_col=0)
 
     # pre-computed pairs for faster backtesting
-    pairs = relevant_pairs()
+    # pairs = relevant_pairs()
     
     times = full_market_info[full_market_info['coin'] == '1INCHBTC']['close_time'].values
     # print(len(times))
@@ -59,16 +59,16 @@ def testing_trading_bot():
             print(f"gathering pairs and trading for day {day} of {len(range(start_period, len(times)))//24 + 1}")
             # information up until the day before to not bias collection of potential pairs
             previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - two_months])]
-            # potential_candidates = list(pairs_helpers.potential_pairs(previous_info, 2).keys())
+            potential_candidates = list(pairs_helpers.potential_pairs(previous_info, 2).keys())
 
             # # gather previous pairs to aid in backtesting
             # with open('coin_pairs.txt', 'a') as f:
             #     f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
             
             # if using pre-created pairs
-            potential_candidates = pairs.get(times[i], None)
-            if potential_candidates == None:
-                print('not gathering pairs correctly for backtesting')
+            # potential_candidates = pairs.get(times[i], None)
+            # if potential_candidates == None:
+            #     print('not gathering pairs correctly for backtesting')
 
             # to do weekly
             if i % 168 == 0 and day > 2:

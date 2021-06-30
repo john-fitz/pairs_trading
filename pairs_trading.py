@@ -327,6 +327,7 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
     
 
 def is_in_cooldown(coin1: str, coin2: str, log: pd.DataFrame, test_mode: bool, test_time: Optional[bool]=None) -> bool:
+    """returns no if it made a loss in the last three days"""
     if test_mode:
         now = test_time
     else:
