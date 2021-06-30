@@ -46,6 +46,7 @@ def testing_trading_bot():
 
     full_market_info = pd.read_csv('data/Anna_coins_full_data.csv', index_col=0)
 
+    # pre-computed pairs for faster backtesting
     pairs = relevant_pairs()
     
     times = full_market_info[full_market_info['coin'] == '1INCHBTC']['close_time'].values
@@ -53,19 +54,21 @@ def testing_trading_bot():
     for i in range(start_period, len(times)):
         # to do daily
         if i % 24 == 0:
-            # print(f"beginning day {day}")
             day += 1
-            print(f"gathering pairs for day {day} of {len(range(start_period, len(times)))//24}")
+            print(f"gathering pairs for day {day} of {len(range(start_period, len(times)1))//24 + 1}")
             
             # information up until the day before to not bias collection of potential pairs
-            # previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - two_months])]
-            # past info up to current time
-            # potential_candidates = list(pairs_helpers.potential_pairs(previous_info, 2).keys())
+            previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - two_months])]
+            potential_candidates = list(pairs_helpers.potential_pairs(previous_info, 2).keys())
 
-            # with open('coin_pairs.txt', 'a') as f:
-            #     f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
+            # gather previous pairs to aid in backtesting
+            with open('coin_pairs.txt', 'a') as f:
+                f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
+            continue            
 
-            potential_candidates = pairs.get(times[i])
+            
+            # if using pre-created pairs
+            potential_candidates = pairs.get(times[i], None)
             if potential_candidates == None:
                 print('not gathering pairs correctly for backtesting')
 
@@ -78,12 +81,12 @@ def testing_trading_bot():
                 print(f"week {weeks} time to run: {datetime.now() - time_holder}")
                 time_holder = datetime.now()
                 
-    
-        # opening log
+        # running hourly
         market_info = full_market_info[(full_market_info['close_time'] <= times[i]) & (full_market_info['close_time'] > times[i - two_months])]
         actual_log, fictional_log = pairs_trading.build_trade_log(True)
         potential_trades = pairs_trading.potential_trades_status(potential_candidates, market_info)
         pairs_trading.pseudo_trade(actual_log, fictional_log, potential_trades, market_info, test_mode=True)
+
     trades = pd.read_csv('testing_trade_log.csv')
     current_profit = sum(trades[trades['current_position'] == 'closed']['profit'])
     print('Total time elapsed (hh:mm:ss.ms) {}'.format(datetime.now() - start_time))

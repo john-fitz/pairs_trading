@@ -275,8 +275,8 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                 coin1_amt = trade_amt / coin1_price
                 coin2_amt = trade_amt / coin2_price
                 
-                trade['coin1_amt'] = coin1_amt * (row_info['coin1_long'] + (1-row_info['coin1_long'])) / row_info['hedge_ratio'])
-                trade['coin2_amt'] = coin2_amt * (row_info['coin2_long'] + (1-row_info['coin2_long'])) * row_info['hedge_ratio'])
+                trade['coin1_amt'] = coin1_amt * (row_info['coin1_long'] + (1-row_info['coin1_long'])) / row_info['hedge_ratio']
+                trade['coin2_amt'] = coin2_amt * (row_info['coin2_long'] + (1-row_info['coin2_long'])) * row_info['hedge_ratio']
                 trade['coin1_long'] = row_info['coin1_long']
                 trade['coin2_long'] = row_info['coin2_long']
                 trade['coin1_entry_price'] = coin1_price
@@ -373,7 +373,7 @@ def log_name(fictional: bool, test_mode: bool, open_position: bool) -> str:
     return log_title
 
 
-def open_position(coin1: str, coin2: str)):
+def open_position(coin1: str, coin2: str):
     # TODO - build logic to open positions
     return None
 
