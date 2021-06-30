@@ -21,7 +21,7 @@ from typing import Optional, Union
 
 PORTFOLIO_VALUE = 10000
 TRADE_AMT_DEFAULT = PORTFOLIO_VALUE * 0.05
-MAX_LOSS = -1 * (PORTFOLIO_VALUE * 0.03)
+MAX_LOSS = -1 * (PORTFOLIO_VALUE * 0.007)
 
 def potential_trades_status(coin_pairs: list, df: pd.DataFrame) -> pd.DataFrame:
     """Goes through the list of potential coins and determines whether they should be traded
@@ -32,6 +32,8 @@ def potential_trades_status(coin_pairs: list, df: pd.DataFrame) -> pd.DataFrame:
         list of potential pairs of coins to trade
     df : pd.DataFrame
         DataFrame consisting of historical market pricing
+    log : pd.DataFrame
+        DataFrame with logs of past trades
 
     Returns
     -------
@@ -130,6 +132,8 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         profit2 = (row_info['coin2_entry_price'] - coin2_price) * row_info['coin2_amt'] * short2_hedge
         current_profit = profit1 + profit2
         open_positions.loc[index, 'profit'] = current_profit
+        if current_profit < row_info['max_loss']:
+            open_positions.loc[index, 'max_loss'] = current_profit
         
         # if not cointegratred anymore, we shouldn't hold onto it
         relevant_positions1 = potential_buys[((potential_buys['coin1'] == coin1) & (potential_buys['coin2'] == coin2))]
@@ -261,46 +265,48 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                                               ((fictional_open_positions['coin1'] == row_info['coin2']) & 
                                               (fictional_open_positions['coin1'] == row_info['coin1']))]
 
-            # if we haven't traded those coins in the past or all past positions are closed
-            if len(relevant_fictional_positions) == 0 or len(relevant_actual_positions) == 0:
-                trade = {}
-                trade['coin1'] = row_info['coin1']
-                trade['coin2'] = row_info['coin2']
-                trade['entry_condition'] = row_info['current_condition'] 
-                trade['exit_mean'] = row_info['mean']
-                
-                # redo later when figure out hedge amounts
-                coin1_price = row_info['coin1_price']
-                coin2_price = row_info['coin2_price']
-                coin1_amt = trade_amt / coin1_price
-                coin2_amt = trade_amt / coin2_price
-                
-                trade['coin1_amt'] = coin1_amt * (row_info['coin1_long'] + (1-row_info['coin1_long'])) / row_info['hedge_ratio']
-                trade['coin2_amt'] = coin2_amt * (row_info['coin2_long'] + (1-row_info['coin2_long'])) * row_info['hedge_ratio']
-                trade['coin1_long'] = row_info['coin1_long']
-                trade['coin2_long'] = row_info['coin2_long']
-                trade['coin1_entry_price'] = coin1_price
-                trade['coin2_entry_price'] = coin2_price
-                trade['coin1_exit_price'] = None
-                trade['coin2_exit_price'] = None
-                trade['entry_time'] = test_time
-                trade['open_day_count'] = 0
-                trade['exit_time'] = None
-                trade['current_position'] = 'open'
-                trade['profit'] = 0
-                trade['suggested_move'] = 'hold'
-                trade['hedge_ratio'] = row_info['hedge_ratio']
-                trade['sell_reason'] = ""
+            if not is_in_cooldown(coin1=row_info['coin1'], coin2=row_info['coin2'], log=actual_log, test_mode=test_mode, test_time=test_time):
+                # if we haven't traded those coins in the past or all past positions are closed
+                if len(relevant_fictional_positions) == 0 or len(relevant_actual_positions) == 0:
+                    trade = {}
+                    trade['coin1'] = row_info['coin1']
+                    trade['coin2'] = row_info['coin2']
+                    trade['entry_condition'] = row_info['current_condition'] 
+                    trade['exit_mean'] = row_info['mean']
+                    
+                    # redo later when figure out hedge amounts
+                    coin1_price = row_info['coin1_price']
+                    coin2_price = row_info['coin2_price']
+                    coin1_amt = trade_amt / coin1_price
+                    coin2_amt = trade_amt / coin2_price
+                    
+                    trade['coin1_amt'] = coin1_amt * (row_info['coin1_long'] + (1-row_info['coin1_long'])) / row_info['hedge_ratio']
+                    trade['coin2_amt'] = coin2_amt * (row_info['coin2_long'] + (1-row_info['coin2_long'])) * row_info['hedge_ratio']
+                    trade['coin1_long'] = row_info['coin1_long']
+                    trade['coin2_long'] = row_info['coin2_long']
+                    trade['coin1_entry_price'] = coin1_price
+                    trade['coin2_entry_price'] = coin2_price
+                    trade['coin1_exit_price'] = None
+                    trade['coin2_exit_price'] = None
+                    trade['entry_time'] = test_time
+                    trade['open_day_count'] = 0
+                    trade['exit_time'] = None
+                    trade['current_position'] = 'open'
+                    trade['profit'] = 0
+                    trade['suggested_move'] = 'hold'
+                    trade['hedge_ratio'] = row_info['hedge_ratio']
+                    trade['sell_reason'] = ""
+                    trade['max_loss'] = 0
 
-                print('opening position for {} and {}'.format(trade['coin1'], trade['coin2']))
-                
-                # TODO: swap these lines after implementing halt_actual
-                # if not halt_actual and len(relevant_actual_positions) == 0:
-                    # actual_log = actual_log.append(trade, ignore_index=True)
-                # if len(relevant_fictional_positions) == 0:
-                #     fictional_log = fictional_log.append(trade, ignore_index=True)
-                actual_log = actual_log.append(trade, ignore_index=True)
-                fictional_log = fictional_log.append(trade, ignore_index=True)
+                    print('opening position for {} and {}'.format(trade['coin1'], trade['coin2']))
+                    
+                    # TODO: swap these lines after implementing halt_actual
+                    # if not halt_actual and len(relevant_actual_positions) == 0:
+                        # actual_log = actual_log.append(trade, ignore_index=True)
+                    # if len(relevant_fictional_positions) == 0:
+                    #     fictional_log = fictional_log.append(trade, ignore_index=True)
+                    actual_log = actual_log.append(trade, ignore_index=True)
+                    fictional_log = fictional_log.append(trade, ignore_index=True)
         
     # sell
     for open_positions in [actual_open_positions, fictional_open_positions]:
@@ -320,6 +326,22 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
     return None
     
 
+def is_in_cooldown(coin1: str, coin2: str, log: pd.DataFrame, test_mode: bool, test_time: Optional[bool]=None) -> bool:
+    if test_mode:
+        now = test_time
+    else:
+        now = round(time.time() * 1000)
+
+    closed = log[(log['coin1'] == coin1) & (log['coin2'] == coin2) & (log['current_position'] == 'closed')]
+    closed_badly = closed[(closed['sell_reason'] == 'stop loss') | (closed['sell_reason'] == 'exceeds hold period')]
+    if len(closed_badly) == 0:
+        return False
+    else:
+        last_close = closed_badly['exit_time'].max()
+        three_days_in_ms = 259200000
+        within_3_days = (now - last_close) < three_days_in_ms
+
+    
 
 def halt_actual_trading(fictional_log: pd.DataFrame) -> bool:
     """reads through the fictional trade log and halts if we are in a period of continuous losses under ideal scenarios"""
@@ -352,7 +374,7 @@ def build_trade_log(test_mode: Optional[bool]=False) -> Union[pd.DataFrame, pd.D
     except:
         trade_log_columns = ['coin1', 'coin2', 'entry_condition', 'exit_mean', 'coin1_amt', 'coin2_amt', 'coin1_long', 'coin2_long',
                     'coin1_entry_price', 'coin2_entry_price', 'coin1_exit_price', 'coin2_exit_price', 'entry_time', 'hedge_ratio',
-                    'open_day_count', 'exit_time', 'current_position', 'suggested_move', 'profit', 'sell_reason']
+                    'open_day_count', 'exit_time', 'current_position', 'suggested_move', 'profit', 'sell_reason', 'max_loss']
 
         actual_log = pd.DataFrame(columns=trade_log_columns)
         fictional_log = pd.DataFrame(columns=trade_log_columns)

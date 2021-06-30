@@ -62,9 +62,9 @@ def plot_coin_crossings(coin1: str, coin2: str, df: pd.DataFrame, log: pd.DataFr
     sell_times = coin_logs['exit_time']
     diff_buy = diff[diff.index.isin(buy_times)]
     diff_sell = diff[diff.index.isin(sell_times)]
-    diff_std = diff.rolling(30).std()
-    diff_mean = coin_logs['exit_mean']
-    diff_mean.index = coin_logs['entry_time']
+    diff_std = diff.rolling(336).std()
+    diff_mean = diff.rolling(336).mean()
+    diff_mean.index = diff.index
     s = np.empty(len(diff))
     s[:] = 0
     s = pd.Series(s)
@@ -78,8 +78,8 @@ def plot_coin_crossings(coin1: str, coin2: str, df: pd.DataFrame, log: pd.DataFr
     plt.plot(ms_to_dates(diff_buy.index), diff_buy, '^', markersize=6, color='g')
     plt.plot(ms_to_dates(diff_sell.index), diff_sell, 'v', markersize=6, color='r')
     plt.plot(ms_to_dates(diff_mean.index), diff_mean, 'k-')
-    plt.plot(ms_to_dates(diff_plus.index), diff_plus, 'r--')
-    plt.plot(ms_to_dates(diff_minus.index), diff_minus, 'b--')
+    plt.plot(ms_to_dates(diff_plus.index), diff_plus, 'r--', linewidth=1)
+    plt.plot(ms_to_dates(diff_minus.index), diff_minus, 'b--', linewidth=1)
     plt.xticks(ms_to_dates(diff.index)[::200], rotation=40)
 
     plt.show();
@@ -100,6 +100,6 @@ def ms_to_dates(times: list) -> list:
 def date_to_ms(date: str) -> list:
     """takes a list of dates and converts to a list of times in ms"""
     dt_obj = datetime.strptime(date, '%Y-%m-%d')
-    millisec = dt_obj.timestamp() * 1000
+    millisec = int(dt_obj.timestamp() * 1000)
 
     return millisec
