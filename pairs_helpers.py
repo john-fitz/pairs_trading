@@ -30,10 +30,10 @@ BINANCE_CLIENT = Client(os.getenv('BINANCE_KEY'), os.getenv('BINANCE_SECRET_KEY'
 
 BINSIZES = {"1m": 1, "5m": 5, "1h": 60, "1d": 1440}
 # batch_size = 750
-BINANCE_SYMBOLS = ['YOYOBTC', 'SNGLSBTC', 'FUNBTC', 'SNMBTC', 'XVGBTC', 'SNTBTC', 'MTHBTC', 'VIBBTC', 'TRXBTC', 'XRPBTC', 'AMBBTC', 'CDTBTC', 'QSPBTC', 'BTSBTC', 'ADABTC', 'XLMBTC', 'CNDBTC', 'TNBBTC', 'GTOBTC', 'OSTBTC', 'VIBEBTC', 'IOSTBTC', 'ZILBTC', 'XEMBTC', 'WPRBTC', 'LOOMBTC', 'IOTXBTC', 'QKCBTC', 'DATABTC', 'SCBTC', 'VETBTC', 'DOCKBTC', 'GOBTC', 'RVNBTC', 'MITHBTC', 'FETBTC', 'CELRBTC', 'MATICBTC', 'PHBBTC', 'TFUELBTC', 'ONEBTC', 'FTMBTC', 'DOGEBTC', 'ANKRBTC', 'COSBTC', 'PERLBTC', 'CHZBTC', 'HBARBTC', 'NKNBTC', 'ARPABTC', 'TROYBTC', 'VITEBTC', 'DREPBTC', 'TCTBTC', 'COTIBTC', 'STPTBTC', 'CHRBTC', 'MDTBTC', 'STMXBTC', 'DGBBTC', 'JSTBTC', 'RSRBTC', 'NBSBTC', 'AKROBTC', 'FORBTC', 'ROSEBTC', 'REEFBTC', 'CKBBTC', 'LINABTC', 'TLMBTC']
+# BINANCE_SYMBOLS = ['YOYOBTC', 'SNGLSBTC', 'FUNBTC', 'SNMBTC', 'XVGBTC', 'SNTBTC', 'MTHBTC', 'VIBBTC', 'TRXBTC', 'XRPBTC', 'AMBBTC', 'CDTBTC', 'QSPBTC', 'BTSBTC', 'ADABTC', 'XLMBTC', 'CNDBTC', 'TNBBTC', 'GTOBTC', 'OSTBTC', 'VIBEBTC', 'IOSTBTC', 'ZILBTC', 'XEMBTC', 'WPRBTC', 'LOOMBTC', 'IOTXBTC', 'QKCBTC', 'DATABTC', 'SCBTC', 'VETBTC', 'DOCKBTC', 'GOBTC', 'RVNBTC', 'MITHBTC', 'FETBTC', 'CELRBTC', 'MATICBTC', 'PHBBTC', 'TFUELBTC', 'ONEBTC', 'FTMBTC', 'DOGEBTC', 'ANKRBTC', 'COSBTC', 'PERLBTC', 'CHZBTC', 'HBARBTC', 'NKNBTC', 'ARPABTC', 'TROYBTC', 'VITEBTC', 'DREPBTC', 'TCTBTC', 'COTIBTC', 'STPTBTC', 'CHRBTC', 'MDTBTC', 'STMXBTC', 'DGBBTC', 'JSTBTC', 'RSRBTC', 'NBSBTC', 'AKROBTC', 'FORBTC', 'ROSEBTC', 'REEFBTC', 'CKBBTC', 'LINABTC', 'TLMBTC']
 # BINANCE_SYMBOLS = [x['symbol'] for x in BINANCE_CLIENT.get_all_tickers() if x['symbol'][-3:]=="BTC"]
 
-# BINANCE_SYMBOLS = ['1INCHBTC', 'AAVEBTC', 'ADABTC', 'ALGOBTC', 'ALICEBTC', 'ALPHABTC', 'AMBBTC', 'ANKRBTC', 'ASTBTC', 'ATOMBTC', 'AVAXBTC', 'BATBTC', 'BCHBTC', 'BLZBTC', 'BNBBTC', 'BQXBTC', 'CELRBTC', 'CHRBTC', 'CHZBTC', 'COTIBTC', 'DEGOBTC', 'DIABTC', 'DOGEBTC', 'DOTBTC', 'DREPBTC', 'DUSKBTC', 'ENJBTC', 'EOSBTC', 'ETHBTC', 'FETBTC', 'FILBTC', 'FTMBTC', 'HBARBTC', 'IOSTBTC', 'JSTBTC', 'KAVABTC', 'KNCBTC', 'LINKBTC', 'LRCBTC', 'LTCBTC', 'LUNABTC', 'MANABTC', 'MATICBTC', 'MDTBTC', 'MITHBTC', 'NEOBTC', 'OGNBTC', 'ONEBTC', 'ONTBTC', 'REEFBTC', 'ROSEBTC', 'RVNBTC', 'SANDBTC', 'SCBTC', 'SOLBTC', 'STMXBTC', 'SUSHIBTC', 'SXPBTC', 'TFUELBTC', 'THETABTC', 'TROYBTC', 'TRXBTC', 'TVKBTC', 'UNIBTC', 'VETBTC', 'WBTCBTC', 'XEMBTC', 'XLMBTC', 'XMRBTC', 'XRPBTC', 'XTZBTC', 'XVGBTC', 'ZILBTC']
+BINANCE_SYMBOLS = ['1INCHBTC', 'AAVEBTC', 'ADABTC', 'ALGOBTC', 'ALICEBTC', 'ALPHABTC', 'AMBBTC', 'ANKRBTC', 'ASTBTC', 'ATOMBTC', 'AVAXBTC', 'BATBTC', 'BCHBTC', 'BLZBTC', 'BNBBTC', 'BQXBTC', 'CELRBTC', 'CHRBTC', 'CHZBTC', 'COTIBTC', 'DEGOBTC', 'DIABTC', 'DOGEBTC', 'DOTBTC', 'DREPBTC', 'DUSKBTC', 'ENJBTC', 'EOSBTC', 'ETHBTC', 'FETBTC', 'FILBTC', 'FTMBTC', 'HBARBTC', 'IOSTBTC', 'JSTBTC', 'KAVABTC', 'KNCBTC', 'LINKBTC', 'LRCBTC', 'LTCBTC', 'LUNABTC', 'MANABTC', 'MATICBTC', 'MDTBTC', 'MITHBTC', 'NEOBTC', 'OGNBTC', 'ONEBTC', 'ONTBTC', 'REEFBTC', 'ROSEBTC', 'RVNBTC', 'SANDBTC', 'SCBTC', 'SOLBTC', 'STMXBTC', 'SUSHIBTC', 'SXPBTC', 'TFUELBTC', 'THETABTC', 'TROYBTC', 'TRXBTC', 'TVKBTC', 'UNIBTC', 'VETBTC', 'WBTCBTC', 'XEMBTC', 'XLMBTC', 'XMRBTC', 'XRPBTC', 'XTZBTC', 'XVGBTC', 'ZILBTC']
 
 
 
@@ -79,7 +79,7 @@ def create_and_save_historicals(kline_size: str, start_date: Optional[str] = '1 
     df['%change'] = (df['close'] - df['open']) / df['open']
 
     if save_compiled:
-        df.to_csv('data/full_data.csv')
+        df.to_csv('data/full_data.csv', index=None)
 
     return df
 
@@ -162,10 +162,14 @@ def two_coin_pricing(coin1: str, coin2: str, df: pd.DataFrame) -> Union[pd.Serie
 
     X2 = pd.Series(df[df['coin'] == coin2]['log_close'])
     X2.index = df[df['coin'] == coin2]['close_time']
+
     
     diff = X1.subtract(X2)
     diff.dropna(inplace=True)
-    
+
+    if len(X1) == 0 or len(X2) == 0 or len(diff) == 0:
+        print(f"uh oh, spagghetio. Something went wrong with {coin1} and {coin2}.\n len(X1): {len(X1)}, len(X2): {len(X2)}, len(diff): {len(diff)}")
+        df.to_csv('broken_df.csv')
     return X1, X2, diff
 
 
