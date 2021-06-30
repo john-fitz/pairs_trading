@@ -37,7 +37,7 @@ BINANCE_SYMBOLS = ['1INCHBTC', 'AAVEBTC', 'ADABTC', 'ALGOBTC', 'ALICEBTC', 'ALPH
 
 
 
-def create_and_save_historicals(kline_size: str, start_date: Optional[str] = '1 Feb 2021', end_date: Optional[str] = None, save_compiled: Optional[bool] = False, save_individual: Optional[bool] = False) -> pd.DataFrame:
+def create_and_save_historicals(kline_size: str, start_date: Optional[str] = '1 Feb 2020', end_date: Optional[str] = None, save_compiled: Optional[bool] = False, save_individual: Optional[bool] = False) -> pd.DataFrame:
     """Pools historical information of all coins in BINANCE_SYMBOLS using the Binance API
 
     Parameters
@@ -253,8 +253,11 @@ def potential_pairs(df: pd.DataFrame, top_n_quartiles: Optional[int] = 2) -> dic
 
     for index in index_list[len(index_list)-top_n_quartiles:]:
         for combo in list(combinations(index, 2)):
-            p_value = pair_stationarity_test(combo[0], combo[1], df)
-            
+            p_value = False
+            try:
+                p_value = pair_stationarity_test(combo[0], combo[1], df)
+            except:
+                print(f"unable to calculate adfuller test on {combo[0]} and {combo[1]} at {df['close_time'].max()}")
             if p_value:
                 potential_candidates[combo] = p_value
     
