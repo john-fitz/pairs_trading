@@ -265,7 +265,7 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                                               ((fictional_open_positions['coin1'] == row_info['coin2']) & 
                                               (fictional_open_positions['coin1'] == row_info['coin1']))]
 
-            if not is_in_cooldown(coin1=row_info['coin1'], coin2=row_info['coin2'], log=actual_log, test_mode=test_mode, test_time=test_time):
+            if not is_in_cooldown(coin1=row_info['coin1'], coin2=row_info['coin2'], fictional_log=fictional_log, test_mode=test_mode, test_time=test_time):
                 # if we haven't traded those coins in the past or all past positions are closed
                 if len(relevant_fictional_positions) == 0 or len(relevant_actual_positions) == 0:
                     trade = {}
@@ -326,21 +326,31 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
     return None
     
 
-def is_in_cooldown(coin1: str, coin2: str, log: pd.DataFrame, test_mode: bool, test_time: Optional[bool]=None) -> bool:
+def is_in_cooldown(coin1: str, coin2: str, fictional_log: pd.DataFrame, test_mode: bool, test_time: Optional[bool]=None) -> bool:
     """returns no if it made a loss in the last three days"""
+    # also has option for two stop losses that I haven't implemented
+
     if test_mode:
         now = test_time
     else:
         now = round(time.time() * 1000)
 
-    closed = log[(log['coin1'] == coin1) & (log['coin2'] == coin2) & (log['current_position'] == 'closed')]
-    closed_badly = closed[(closed['sell_reason'] == 'stop loss') | (closed['sell_reason'] == 'exceeds hold period')]
+    closed = fictional_log[(fictional_log['coin1'] == coin1) & (fictional_log['coin2'] == coin2) & (fictional_log['current_position'] == 'closed')]
+    closed_indvidual = fictional_log[((fictional_log['coin1'] == coin1) | (fictional_log['coin2'] == coin1)) | ((fictional_log['coin1'] == coin2) | (fictional_log['coin2'] == coin2)) & (fictional_log['current_position'] == 'closed')]
+    # closed_two_stop_losses = closed.iloc[-1] == 'stop loss' and closed.iloc[-2] == 'stop loss'
+    closed_badly_individual = closed_indvidual[(closed_indvidual['sell_reason'] == 'stop loss') |((closed_indvidual['sell_reason'] == 'exceeds hold period') & (closed['profit'] < 0))]
+    closed_badly = closed[(closed['sell_reason'] == 'stop loss') |((closed['sell_reason'] == 'exceeds hold period') & (closed['profit'] < 0))]
+
+    
     if len(closed_badly) == 0:
         return False
     else:
         last_close = closed_badly['exit_time'].max()
         three_days_in_ms = 259200000
         within_3_days = (now - last_close) < three_days_in_ms
+
+        return within_3_days # or closed_two_stop_losses
+    
 
     
 

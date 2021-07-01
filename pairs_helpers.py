@@ -173,7 +173,7 @@ def two_coin_pricing(coin1: str, coin2: str, df: pd.DataFrame) -> Union[pd.Serie
     return X1, X2, diff
 
 
-def single_stationarity_test(X: pd.Series, cutoff: Optional[float] = 0.01) -> Union[float, bool]:
+def single_stationarity_test(X: pd.Series, cutoff: Optional[float] = 0.01) -> bool:
     """Tests for time series stationarity using the Augmented Dicky-Fuller Test. Helper function for pair_stationarity_test
 
     Parameters
@@ -191,12 +191,12 @@ def single_stationarity_test(X: pd.Series, cutoff: Optional[float] = 0.01) -> Un
 
     pvalue = adfuller(X)[1]
     if pvalue < cutoff:
-        return pvalue
+        return True
     else:
         return False
 
 
-def pair_stationarity_test(coin1: str, coin2: str, df: pd.DataFrame) -> Union[float, bool]:
+def pair_stationarity_test(coin1: str, coin2: str, df: pd.DataFrame) -> bool:
     """checks whether a pair of coins is stationary. Helper function for potential pairs
 
     Parameters
@@ -219,7 +219,7 @@ def pair_stationarity_test(coin1: str, coin2: str, df: pd.DataFrame) -> Union[fl
     return single_stationarity_test(diff)
 
 
-def potential_pairs(df: pd.DataFrame, top_n_quartiles: Optional[int] = 2) -> dict:
+def potential_pairs(df: pd.DataFrame, top_n_quartiles: Optional[int] = 2) -> list:
     """creates a list of potential coins to trade based on stationarity and volume 
     
     Parameters
@@ -249,17 +249,17 @@ def potential_pairs(df: pd.DataFrame, top_n_quartiles: Optional[int] = 2) -> dic
     quant_100_index = volumes[volumes > quant_75].index
 
     index_list = [quant_25_index, quant_50_index, quant_75_index, quant_100_index]
-    potential_candidates = {}
+    potential_candidates = []
 
     for index in index_list[len(index_list)-top_n_quartiles:]:
         for combo in list(combinations(index, 2)):
-            p_value = False
+            is_stationary = False
             try:
-                p_value = pair_stationarity_test(combo[0], combo[1], df)
+                is_stationary = pair_stationarity_test(combo[0], combo[1], df)
             except:
                 print(f"unable to calculate adfuller test on {combo[0]} and {combo[1]} at {df['close_time'].max()}")
-            if p_value:
-                potential_candidates[combo] = p_value
+            if is_stationary:
+                potential_candidates.append(combo)
     
     return potential_candidates
 

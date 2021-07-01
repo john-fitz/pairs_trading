@@ -39,8 +39,12 @@ def testing_trading_bot():
     start_time = datetime.now()
     time_holder = datetime.now()
     # 1460 hours is 61 days
-    start_period = 1488
+    # start_period = 1488
+    # end_period = len(times)
+    start_period = 8112
+    end_period = 10018
     two_months = 1460
+    six_months = 4380
     weeks = 0
     day = 0
 
@@ -49,21 +53,20 @@ def testing_trading_bot():
     # pre-computed pairs for faster backtesting
     # pairs = relevant_pairs()
     
-    times = full_market_info[full_market_info['coin'] == '1INCHBTC']['close_time'].values
+    times = full_market_info[full_market_info['coin'] == 'ADABTC']['close_time'].values
     # print(len(times))
-    for i in range(start_period, len(times)):
+    for i in range(start_period, end_period):
         # to do daily
         if i % 24 == 0:
-            print(times[i])
             day += 1
-            print(f"gathering pairs and trading for day {day} of {len(range(start_period, len(times)))//24 + 1}")
+            print(f"gathering pairs and trading for day {day} of {len(range(start_period, end_period))//24 + 1}")
             # information up until the day before to not bias collection of potential pairs
-            previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - two_months])]
-            potential_candidates = list(pairs_helpers.potential_pairs(previous_info, 2).keys())
+            previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - six_months])]
+            potential_candidates = pairs_helpers.potential_pairs(previous_info, 2)
 
             # # gather previous pairs to aid in backtesting
-            # with open('coin_pairs.txt', 'a') as f:
-            #     f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
+            with open('coin_pairs.txt', 'a') as f:
+                f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
             
             # if using pre-created pairs
             # potential_candidates = pairs.get(times[i], None)
@@ -80,7 +83,7 @@ def testing_trading_bot():
                 time_holder = datetime.now()
                 
         # running hourly
-        market_info = full_market_info[(full_market_info['close_time'] <= times[i]) & (full_market_info['close_time'] > times[i - two_months])]
+        market_info = full_market_info[(full_market_info['close_time'] <= times[i]) & (full_market_info['close_time'] > times[i - six_months])]
         actual_log, fictional_log = pairs_trading.build_trade_log(True)
         potential_trades = pairs_trading.potential_trades_status(potential_candidates, market_info)
         pairs_trading.pseudo_trade(actual_log, fictional_log, potential_trades, market_info, test_mode=True)

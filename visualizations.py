@@ -63,14 +63,14 @@ def plot_coin_crossings(coin1: str, coin2: str, df: pd.DataFrame, log: pd.DataFr
     diff_buy = diff[diff.index.isin(buy_times)]
     diff_sell = diff[diff.index.isin(sell_times)]
     diff_std = diff.rolling(336).std()
-    diff_mean = diff.rolling(336).mean()
-    diff_mean.index = diff.index
+    diff_mean = diff['mean']
     s = np.empty(len(diff))
     s[:] = 0
     s = pd.Series(s)
     s.index = diff.index
     diff_mean = s + diff_mean
     diff_mean = diff_mean.fillna(method='ffill')
+    diff_mean.index = diff.index
     diff_plus = diff_mean + diff_std
     diff_minus = diff_mean - diff_std
     plt.figure(figsize=(15,10))
