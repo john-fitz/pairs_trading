@@ -9,7 +9,6 @@ This file can be imported as a module and contains the following functions:
     * build_trade_log - returns the trade log if a CSV is found, otherwise it creates a new DataFrame
 """
 
-
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -341,7 +340,7 @@ def is_in_cooldown(coin1: str, coin2: str, fictional_log: pd.DataFrame, test_mod
     closed_badly_individual = closed_indvidual[(closed_indvidual['sell_reason'] == 'stop loss') |((closed_indvidual['sell_reason'] == 'exceeds hold period') & (closed['profit'] < 0))]
     closed_badly = closed[(closed['sell_reason'] == 'stop loss') |((closed['sell_reason'] == 'exceeds hold period') & (closed['profit'] < 0))]
 
-    
+
     if len(closed_badly) == 0:
         return False
     else:
