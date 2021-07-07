@@ -282,9 +282,8 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
         
     # sell
     # TODO: add logic to check if there is enough money to repurchase portfolio
-    i = 0
+    fictional = False
     for open_positions in [actual_open_positions, fictional_open_positions]:
-        fictional = False if i=0 else True
         portfolio = portfolio_management.portfolio_positions(fictional=fictional)
         
         for index, row in open_positions.iterrows():
@@ -305,7 +304,7 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                     portfolio[coin2] = (portfolio[coin2][0] - row_info['coin2_amt'], portfolio[coin2][1] - row_info['coin2_amt']*row_info['coin2_price'])
        
         portfolio_management.save_portfolio(fictional=fictional, portfolio=portfolio)
-        i += 1
+        fictional = True
 
     update_log(log=actual_log, open_positions=actual_open_positions, fictional=False, test_mode=test_mode)
     update_log(log=fictional_log, open_positions=fictional_open_positions, fictional=True, test_mode=test_mode)

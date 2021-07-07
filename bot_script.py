@@ -8,9 +8,10 @@ from datetime import timedelta, datetime
 import pairs_helpers
 import pairs_trading
 import ast
+import portfolio_management
 
 def relevant_pairs() -> dict:
-    with open('data/Anna_coin_pairs.txt') as f:
+    with open('data/coin_pairs/coin_pairs.txt') as f:
         lines = f.readlines()
 
     pairs_dict = {}
@@ -51,7 +52,7 @@ def testing_trading_bot():
     full_market_info = pd.read_csv('data/Anna_coins_full_data.csv', index_col=0)
 
     # pre-computed pairs for faster backtesting
-    # pairs = relevant_pairs()
+    pairs = relevant_pairs()
     
     times = full_market_info[full_market_info['coin'] == 'ADABTC']['close_time'].values
     # print(len(times))
@@ -62,28 +63,27 @@ def testing_trading_bot():
             print(f"gathering pairs and trading for day {day} of {len(range(start_period, end_period))//24 + 1}")
             # information up until the day before to not bias collection of potential pairs
             previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - six_months])]
-            potential_candidates = pairs_helpers.potential_pairs(previous_info, 2)
-
-            # # gather previous pairs to aid in backtesting
-            with open('coin_pairs.txt', 'a') as f:
-                f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
             
-            # if using pre-created pairs
-            # potential_candidates = pairs.get(times[i], None)
-            # if potential_candidates == None:
-            #     print('not gathering pairs correctly for backtesting')
+            potential_candidates = pairs.get(i)
+            if potential_candidates == None:
+                # gather previous pairs to aid in backtesting
+                potential_candidates = pairs_helpers.potential_pairs(previous_info, 2)
+                with open('coin_pairs.txt', 'a') as f:
+                    f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
 
             # to do weekly
             if i % 168 == 0 and day > 2:
                 weeks += 1
                 trades = pd.read_csv('testing_trade_log.csv')
-                current_profit = sum(trades[(trades['current_position'] == 'closed') & (trades['exit_time'] >= times[i - 168])]['profit'])
+                current_profit = portfolio_management.portfolio_value()
+                # current_profit = sum(trades[(trades['current_position'] == 'closed') & (trades['exit_time'] >= times[i - 168])]['profit'])
                 print('week {} profit: {}'.format(weeks, current_profit))
                 print(f"week {weeks} time to run: {datetime.now() - time_holder}")
                 time_holder = datetime.now()
                 
         # running hourly
         market_info = full_market_info[(full_market_info['close_time'] <= times[i]) & (full_market_info['close_time'] > times[i - six_months])]
+        portfolio_management.update_portfolio_positions(full_market_info=market_info)
         actual_log, fictional_log = pairs_trading.build_trade_log(True)
         potential_trades = pairs_trading.potential_trades_status(potential_candidates, market_info)
         pairs_trading.pseudo_trade(actual_log, fictional_log, potential_trades, market_info, test_mode=True)
