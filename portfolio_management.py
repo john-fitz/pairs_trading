@@ -118,7 +118,7 @@ def purchase_initial_position(coin_pairs: str, market_info: pd.DataFrame) -> Non
     fictional = False
     for portfolio in [actual_portfolio, fictional_portfolio]:
         for coin in coin_list:
-            if coin not in portfolio.keys():
+            if coin not in portfolio.keys() and portfolio['balance'] > 0:
                 print(f"adding ${DEFAULT_PURCHASE_AMT} of {coin} to {'fictional' if fictional else 'actual'} portfolio")
                 # print(len(market_info[market_info['coin'] == coin]['close']))
                 coin_price = market_info[market_info['coin'] == coin]['close'].iloc[-1]

@@ -117,14 +117,14 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         coin1 = row_info['coin1']
         coin2 = row_info['coin2']
 
-        _, _, diff = pairs_helpers.two_coin_pricing(coin1, coin2, full_market_info)
+        coin1_pricing, coin2_pricing, diff = pairs_helpers.two_coin_pricing(coin1, coin2, full_market_info)
         
-        coin1_price = full_market_info[full_market_info['coin']==coin1]['log_close'].iloc[-1]
-        coin2_price = full_market_info[full_market_info['coin']==coin2]['log_close'].iloc[-1]
-        current_diff = np.log(coin1_price) - np.log(coin2_price)
-        # current_diff = diff.values[-1]
-        # coin1_price = np.exp(coin1_pricing.values[-1])
-        # coin2_price = np.exp(coin2_pricing.values[-1])
+        # coin1_price = full_market_info[full_market_info['coin']==coin1]['close'].iloc[-1]
+        # coin2_price = full_market_info[full_market_info['coin']==coin2]['close'].iloc[-1]
+        # current_diff = coin1_price - coin2_price
+        current_diff = diff.values[-1]
+        coin1_price = np.exp(coin1_pricing.values[-1])
+        coin2_price = np.exp(coin2_pricing.values[-1])
         open_positions.loc[index, 'coin1_price'] = coin1_price
         open_positions.loc[index, 'coin2_price'] = coin2_price
         
@@ -132,8 +132,8 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         short1 = -1 if row_info['coin1_long'] == False else 1
         short2 = -row_info['hedge_ratio'] if row_info['coin2_long'] == False else row_info['hedge_ratio']
         
-        profit1 = (row_info['coin1_entry_price'] - coin1_price) * row_info['coin1_amt'] * short1
-        profit2 = (row_info['coin2_entry_price'] - coin2_price) * row_info['coin2_amt'] * short2
+        profit1 = (coin1_price - row_info['coin1_entry_price']) * row_info['coin1_amt'] * short1
+        profit2 = (coin2_price - row_info['coin2_entry_price']) * row_info['coin2_amt'] * short2
         current_profit = profit1 + profit2
 
         start_value = row_info['coin1_entry_price'] * row_info['coin1_amt'] + row_info['coin2_entry_price'] * row_info['coin2_amt']
@@ -151,13 +151,13 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         # need to identify positive if crosses back over threshold (entry_condition)
         condition = 'above' if current_diff >= row_info['exit_mean'] else 'below'
         
-        if open_days >= 10 or current_profit < MAX_LOSS or row_info['entry_condition'] != condition: #or not_cointegrated:
+        if open_days >= 10 or current_profit < -0.07*start_value or row_info['entry_condition'] != condition: #or not_cointegrated:
             open_positions.loc[index, 'suggested_move'] = 'sell'
 
             if open_days >= 10:
                 open_positions.loc[index, 'sell_reason'] = 'exceeds hold period'
 
-            elif current_profit < MAX_LOSS:
+            elif current_profit < -0.07*start_value:
                 open_positions.loc[index, 'sell_reason'] = 'stop loss'
 
             elif row_info['entry_condition'] != condition:
