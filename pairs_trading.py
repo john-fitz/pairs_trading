@@ -403,10 +403,10 @@ def open_position(log_information: dict, log: pd.DataFrame) -> pd.DataFrame:
     coin1_price = log_information['coin1_price']
     coin2_price = log_information['coin2_price']
 
-    coin1_amt, coin2_amt = portfolio_management.trade_amount(coin1, coin2, hedge_ratio, log)
+    coin1_amt, coin2_amt = portfolio_management.trade_amount(coin1=coin1, coin2=coin2, hedge_ratio=hedge_ratio, log=log)
     
-    trade['coin1_amt'] = coin1_amt * (log_information['coin1_long'] + (1-log_information['coin1_long'])) / log_information['hedge_ratio']
-    trade['coin2_amt'] = coin2_amt * (log_information['coin2_long'] + (1-log_information['coin2_long'])) * log_information['hedge_ratio']
+    trade['coin1_amt'] = coin1_amt
+    trade['coin2_amt'] = coin2_amt
     trade['coin1_long'] = log_information['coin1_long']
     trade['coin2_long'] = log_information['coin2_long']
     trade['coin1_entry_price'] = coin1_price

@@ -3,8 +3,11 @@ import numpy as np
 from typing import Optional, Union
 import pickle
 
-def trade_amount(coin1: str, coin2: str, hedge_ratio: float, log: pd.DataFrame) --> Union[float, float]:
+def trade_amount(coin1: str, coin2: str, hedge_ratio: float, long1: bool) --> Union[float, float]:
     """ checks positions for coin1 and coin2 to see the dollar amount of each coin that should be traded
+
+    Assumes that the limiting factor is the one that we have to sell and can buy up to the remaining balance on our account.
+    If there is no money to trade or no ability left to sell a coin, the function returns (0,0)
     
     Parameters
     ----------
@@ -14,8 +17,8 @@ def trade_amount(coin1: str, coin2: str, hedge_ratio: float, log: pd.DataFrame) 
         name of coin2 to trade
     hedge_ratio : float
         ratio of how much to purchase of coin1 to coin2
-    log : pd.DataFrame
-        DataFrame with logs of past trades
+    short1 : bool
+        flag if we are going long on coin1
 
     Returns
     -------
@@ -24,11 +27,33 @@ def trade_amount(coin1: str, coin2: str, hedge_ratio: float, log: pd.DataFrame) 
     """
     portfolio = portfolio_positions()
     
+    remaining_balance = portfolio['remaining_balance']
+    max_budget = 0.90 * remaining_balance # trying not to exhaust all money due to slippage
     coin1_coin_amt, coin1_dollar_amt = portfolio[coin1]
     coin2_coin_amt, coin2_dollar_amt = portfolio[coin2]
-    
-    min_amt = min(coin1_dollar_amt, coin2_dollar_amt * hedge_ratio)
-    
+
+    # if we have no more coin to sell, return (0, 0)
+    # if we are buying more than 90% of our remaining balance, limit to 90% of balance
+
+
+    # if we are going long on coin1, the limiting factor is how much of coin2 we have left to sell and cash reserves
+    if long1:
+        # limiting max trade to 10% of remaining balance
+        coin2_dollar_amt *= 0.10
+        # just for wiggle room, we leave 10% of balance in reserves
+        if coin2_dollar_amt * hedge_ratio >= max_budget
+            min_amt = max_budget
+        else:
+            min_amt = coin2_dollar_amt
+    else:
+        # limiting max trade to 10% of remaining balance
+        coin1_dollar_amt *= 0.10
+        # just for wiggle room, we leave 10% of balance in reserves
+        if coin1_dollar_amt >= max_budget
+            min_amt = max_budget
+        else:
+            min_amt = coin1_dollar_amt
+
     coin1_amt = (min_amt / coin1_dollar_amt) * coin1_coin_amt
     coin2_amt = (min_amt / coin2_dollar_amt) * coin1_coin_amt * hedge_ratio
 
@@ -38,6 +63,8 @@ def trade_amount(coin1: str, coin2: str, hedge_ratio: float, log: pd.DataFrame) 
 
 def portfolio_positions() -> dict:
     """returns a dataframe with the portfolio"""
+    # dictionary is of the form {coin_name: (number_of_coins_owned, dollar_value_of_position)} with the 
+    # first entry being {remaining_balance: float}
     portfolio = pickle.load( open( "crypto_positions.p", "rb" ) )
     
     return portfolio
