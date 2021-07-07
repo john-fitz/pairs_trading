@@ -117,10 +117,10 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         coin1 = row_info['coin1']
         coin2 = row_info['coin2']
 
-        coin1_pricing, coin2_pricing, diff = pairs_helpers.two_coin_pricing(coin1, coin2, full_market_info)
+        _, _, diff = pairs_helpers.two_coin_pricing(coin1, coin2, full_market_info)
         
-        coin1_price = np.exp(full_market_info[full_market_info['coin']==coin1]['log_close'][-1])
-        coin2_price = np.exp(full_market_info[full_market_info['coin']==coin2]['log_close'][-1])
+        coin1_price = full_market_info[full_market_info['coin']==coin1]['log_close'].iloc[-1]
+        coin2_price = full_market_info[full_market_info['coin']==coin2]['log_close'].iloc[-1]
         current_diff = np.log(coin1_price) - np.log(coin2_price)
         # current_diff = diff.values[-1]
         # coin1_price = np.exp(coin1_pricing.values[-1])
@@ -129,12 +129,15 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         open_positions.loc[index, 'coin2_price'] = coin2_price
         
         # short position is in the amount of the hedge ratio
-        short1_hedge = -row_info['hedge_ratio'] if row_info['coin1_long'] == False else 1
-        short2_hedge = -row_info['hedge_ratio'] if row_info['coin2_long'] == False else 1
-
-        profit1 = (row_info['coin1_entry_price'] - coin1_price) * row_info['coin1_amt'] * short1_hedge
-        profit2 = (row_info['coin2_entry_price'] - coin2_price) * row_info['coin2_amt'] * short2_hedge
+        short1 = -1 if row_info['coin1_long'] == False else 1
+        short2 = -row_info['hedge_ratio'] if row_info['coin2_long'] == False else row_info['hedge_ratio']
+        
+        profit1 = (row_info['coin1_entry_price'] - coin1_price) * row_info['coin1_amt'] * short1
+        profit2 = (row_info['coin2_entry_price'] - coin2_price) * row_info['coin2_amt'] * short2
         current_profit = profit1 + profit2
+
+        start_value = row_info['coin1_entry_price'] * row_info['coin1_amt'] + row_info['coin2_entry_price'] * row_info['coin2_amt']
+        
         open_positions.loc[index, 'profit'] = current_profit
         if current_profit < row_info['max_loss']:
             open_positions.loc[index, 'max_loss'] = current_profit
@@ -270,15 +273,15 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
             if not is_in_cooldown(coin1=row_info['coin1'], coin2=row_info['coin2'], fictional_log=fictional_log, test_mode=test_mode, test_time=test_time):
                 # if we haven't traded those coins in the past or all past positions are closed
                 if len(relevant_fictional_positions) == 0 or len(relevant_actual_positions) == 0:
-                    print('opening position for {} and {}'.format(trade['coin1'], trade['coin2']))
+                    print('opening position for {} and {}'.format(row_info['coin1'], row_info['coin2']))
                     
                     # TODO: swap these lines after implementing halt_actual
                     # if not halt_actual and len(relevant_actual_positions) == 0:
                         # actual_log = actual_log.append(trade, ignore_index=True)
                     # if len(relevant_fictional_positions) == 0:
                     #     fictional_log = fictional_log.append(trade, ignore_index=True)
-                    actual_log = open_position(log_information=row_info, log=actual_log, test_time=test_time)
-                    fictional_log = open_position(log_information=row_info, log=fictional_log, test_time=test_time)
+                    actual_log = open_position(log_information=row_info, log=actual_log, fictional=False, test_time=test_time)
+                    fictional_log = open_position(log_information=row_info, log=fictional_log, fictional=True, test_time=test_time)
         
     # sell
     # TODO: add logic to check if there is enough money to repurchase portfolio
@@ -290,7 +293,7 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
             row_info = row.to_dict()
             if row_info['suggested_move'] == 'sell':
                 coin1, coin2 = row_info['coin1'], row_info['coin2']
-                print('closing position for  {} and {}'.format(coin1, coin2))
+                print('closing {} position for  {} and {}'.format('fictional' if fictional else 'actual', coin1, coin2))
                 open_positions.loc[index, 'coin1_exit_price'] = row_info['coin1_price']                
                 open_positions.loc[index, 'coin2_exit_price'] = row_info['coin2_price']
                 open_positions.loc[index, 'exit_time'] = test_time if test_mode else round(time.time() * 1000)
@@ -418,7 +421,7 @@ def open_position(log_information: dict, log: pd.DataFrame, fictional: bool, tes
     coin1_price = log_information['coin1_price']
     coin2_price = log_information['coin2_price']
 
-    coin1_amt, coin2_amt = portfolio_management.trade_amount(coin1=coin1, coin2=coin2, hedge_ratio=hedge_ratio, log=log)
+    coin1_amt, coin2_amt = portfolio_management.trade_amount(coin1=coin1, coin2=coin2, hedge_ratio=hedge_ratio, long1=log_information['coin1_long'], fictional=fictional)
     portfolio = portfolio_management.portfolio_positions(fictional=fictional)
 
     # confirming that there is something to actually buy and it's not a float rounding error. Min trade value is $1
@@ -443,10 +446,10 @@ def open_position(log_information: dict, log: pd.DataFrame, fictional: bool, tes
 
         if log_information['coin1_long']:
             portfolio[coin1] = (portfolio[coin1][0] + coin1_amt, portfolio[coin1][1] + coin1_amt*coin1_price)
-            portfolio[coin2] = (portfolio[coin2][0] - coin2_amt, portfolio[coin2][2] - coin2_amt*coin2_price)
+            portfolio[coin2] = (portfolio[coin2][0] - coin2_amt, portfolio[coin2][1] - coin2_amt*coin2_price)
         else:
             portfolio[coin1] = (portfolio[coin1][0] - coin1_amt, portfolio[coin1][1] - coin1_amt*coin1_price)
-            portfolio[coin2] = (portfolio[coin2][0] + coin2_amt, portfolio[coin2][2] + coin2_amt*coin2_price)
+            portfolio[coin2] = (portfolio[coin2][0] + coin2_amt, portfolio[coin2][1] + coin2_amt*coin2_price)
         
         portfolio_management.save_portfolio(fictional=fictional, portfolio=portfolio)
         
