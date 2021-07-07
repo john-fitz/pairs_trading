@@ -267,36 +267,6 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
             if not is_in_cooldown(coin1=row_info['coin1'], coin2=row_info['coin2'], fictional_log=fictional_log, test_mode=test_mode, test_time=test_time):
                 # if we haven't traded those coins in the past or all past positions are closed
                 if len(relevant_fictional_positions) == 0 or len(relevant_actual_positions) == 0:
-                    trade = {}
-                    trade['coin1'] = row_info['coin1']
-                    trade['coin2'] = row_info['coin2']
-                    trade['entry_condition'] = row_info['current_condition'] 
-                    trade['exit_mean'] = row_info['mean']
-                    
-                    # redo later when figure out hedge amounts
-                    coin1_price = row_info['coin1_price']
-                    coin2_price = row_info['coin2_price']
-                    coin1_amt = trade_amt / coin1_price
-                    coin2_amt = trade_amt / coin2_price
-                    
-                    trade['coin1_amt'] = coin1_amt * (row_info['coin1_long'] + (1-row_info['coin1_long'])) / row_info['hedge_ratio']
-                    trade['coin2_amt'] = coin2_amt * (row_info['coin2_long'] + (1-row_info['coin2_long'])) * row_info['hedge_ratio']
-                    trade['coin1_long'] = row_info['coin1_long']
-                    trade['coin2_long'] = row_info['coin2_long']
-                    trade['coin1_entry_price'] = coin1_price
-                    trade['coin2_entry_price'] = coin2_price
-                    trade['coin1_exit_price'] = None
-                    trade['coin2_exit_price'] = None
-                    trade['entry_time'] = test_time
-                    trade['open_day_count'] = 0
-                    trade['exit_time'] = None
-                    trade['current_position'] = 'open'
-                    trade['profit'] = 0
-                    trade['suggested_move'] = 'hold'
-                    trade['hedge_ratio'] = row_info['hedge_ratio']
-                    trade['sell_reason'] = ""
-                    trade['max_loss'] = 0
-
                     print('opening position for {} and {}'.format(trade['coin1'], trade['coin2']))
                     
                     # TODO: swap these lines after implementing halt_actual
@@ -304,8 +274,8 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                         # actual_log = actual_log.append(trade, ignore_index=True)
                     # if len(relevant_fictional_positions) == 0:
                     #     fictional_log = fictional_log.append(trade, ignore_index=True)
-                    actual_log = actual_log.append(trade, ignore_index=True)
-                    fictional_log = fictional_log.append(trade, ignore_index=True)
+                    actual_log = open_position(log_information=row_info, log=actual_log)
+                    fictional_log = open_position(log_information=row_info, log=fictional_log)
         
     # sell
     for open_positions in [actual_open_positions, fictional_open_positions]:
@@ -405,9 +375,52 @@ def log_name(fictional: bool, test_mode: bool, open_position: bool) -> str:
     return log_title
 
 
-def open_position(coin1: str, coin2: str):
-    # TODO - build logic to open positions
-    return None
+def open_position(log_information: dict, log: pd.DataFrame) -> pd.DataFrame:
+    """takes the row_info dict of information from the log and creates an open position for the trade
+
+    Parameters
+    ----------
+    log_information : dict
+        contains a row from the log related to the trade
+    log : pd.DataFrame
+        contains the original log to append the information to
+
+    Returns
+    -------
+    pd.DataFrame
+        updated log DataFrame  
+    """
+    trade = {}
+    trade['coin1'] = log_information['coin1']
+    trade['coin2'] = log_information['coin2']
+    trade['entry_condition'] = log_information['current_condition'] 
+    trade['exit_mean'] = log_information['mean']
+    
+    # redo later when figure out hedge amounts
+    coin1_price = log_information['coin1_price']
+    coin2_price = log_information['coin2_price']
+    coin1_amt = trade_amt / coin1_price
+    coin2_amt = trade_amt / coin2_price
+    
+    trade['coin1_amt'] = coin1_amt * (log_information['coin1_long'] + (1-log_information['coin1_long'])) / log_information['hedge_ratio']
+    trade['coin2_amt'] = coin2_amt * (log_information['coin2_long'] + (1-log_information['coin2_long'])) * log_information['hedge_ratio']
+    trade['coin1_long'] = log_information['coin1_long']
+    trade['coin2_long'] = log_information['coin2_long']
+    trade['coin1_entry_price'] = coin1_price
+    trade['coin2_entry_price'] = coin2_price
+    trade['coin1_exit_price'] = None
+    trade['coin2_exit_price'] = None
+    trade['entry_time'] = test_time
+    trade['open_day_count'] = 0
+    trade['exit_time'] = None
+    trade['current_position'] = 'open'
+    trade['profit'] = 0
+    trade['suggested_move'] = 'hold'
+    trade['hedge_ratio'] = log_information['hedge_ratio']
+    trade['sell_reason'] = ""
+    trade['max_loss'] = 0
+
+    return log.append(trade, ignore_index=True)
 
 def close_position(coin1: str, coin2: str):
     # TODO - build logic to open positions

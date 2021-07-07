@@ -24,10 +24,14 @@ def trade_amount(coin1: str, coin2: str, hedge_ratio: float, log: pd.DataFrame) 
     """
     portfolio = portfolio_positions()
     
+    coin1_coin_amt, coin1_dollar_amt = portfolio[coin1]
+    coin2_coin_amt, coin2_dollar_amt = portfolio[coin2]
+    
+    min_amt = min(coin1_dollar_amt, coin2_dollar_amt * hedge_ratio)
+    
+    coin1_amt = (min_amt / coin1_dollar_amt) * coin1_coin_amt
+    coin2_amt = (min_amt / coin2_dollar_amt) * coin1_coin_amt * hedge_ratio
 
-
-
-    update_portfolio(portfolio)
     return (coin1_amt, coin2_amt)
 
 
