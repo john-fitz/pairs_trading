@@ -37,6 +37,10 @@ def relevant_pairs() -> dict:
     return pairs_dict
 
 def testing_trading_bot():
+    starting_portfolio = {'balance': 10000}
+    portfolio_management.save_portfolio(fictional=True, portfolio=starting_portfolio)
+    portfolio_management.save_portfolio(fictional=False, portfolio=starting_portfolio)
+    start_value = 10000
     start_time = datetime.now()
     time_holder = datetime.now()
     # 1460 hours is 61 days
@@ -64,18 +68,22 @@ def testing_trading_bot():
             # information up until the day before to not bias collection of potential pairs
             previous_info = full_market_info[(full_market_info['close_time'] <= times[i - 24]) & (full_market_info['close_time'] > times[i - six_months])]
             
-            potential_candidates = pairs.get(i)
+            potential_candidates = pairs.get(times[i])
             if potential_candidates == None:
                 # gather previous pairs to aid in backtesting
+                print(f"finding candidates for i = {i}")
                 potential_candidates = pairs_helpers.potential_pairs(previous_info, 2)
                 with open('coin_pairs.txt', 'a') as f:
                     f.write("{" + str(times[i]) + "}" + str(potential_candidates) +"\n")
-
+            
+            portfolio_management.purchase_initial_position(potential_candidates, previous_info)
+            
             # to do weekly
             if i % 168 == 0 and day > 2:
                 weeks += 1
                 trades = pd.read_csv('testing_trade_log.csv')
-                current_profit = portfolio_management.portfolio_value()
+                current_profit = start_value - portfolio_management.portfolio_value()
+                start_value = current_profit
                 # current_profit = sum(trades[(trades['current_position'] == 'closed') & (trades['exit_time'] >= times[i - 168])]['profit'])
                 print('week {} profit: {}'.format(weeks, current_profit))
                 print(f"week {weeks} time to run: {datetime.now() - time_holder}")
@@ -83,7 +91,7 @@ def testing_trading_bot():
                 
         # running hourly
         market_info = full_market_info[(full_market_info['close_time'] <= times[i]) & (full_market_info['close_time'] > times[i - six_months])]
-        portfolio_management.update_portfolio_positions(full_market_info=market_info)
+        portfolio_management.update_portfolio_positions(market_info=market_info)
         actual_log, fictional_log = pairs_trading.build_trade_log(True)
         potential_trades = pairs_trading.potential_trades_status(potential_candidates, market_info)
         pairs_trading.pseudo_trade(actual_log, fictional_log, potential_trades, market_info, test_mode=True)
