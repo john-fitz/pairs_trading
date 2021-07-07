@@ -15,6 +15,7 @@ from datetime import datetime
 import pairs_helpers
 import time
 import visualizations
+import portfolio_management
 from typing import Optional, Union
 
 
@@ -210,7 +211,7 @@ def update_log(log: pd.DataFrame, open_positions: pd.DataFrame, fictional: bool,
     log.to_csv(log_name(fictional=fictional, test_mode=test_mode, open_position=False), index=False)
     return None
 
-def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potential_trades: pd.DataFrame, full_market_info: pd.DataFrame, trade_amt: Optional[float]=TRADE_AMT_DEFAULT, test_mode: Optional[bool]=False) -> None:
+def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potential_trades: pd.DataFrame, full_market_info: pd.DataFrame, test_mode: Optional[bool]=False) -> None:
     """Implements logic of buying/selling and executes it by updating the log
     
     Parameters
@@ -225,8 +226,6 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
         DataFrame consisting of historical market pricing
     test_mode : bool, optional
         flag for whether this is being run in production or for testing (default option is False)
-    trade_amt : float, optional
-        how much money to place on each trade in the long direction (default is $50)
     test_mode : bool, optional
         flag for whether we are in testing vs live
 
@@ -390,17 +389,21 @@ def open_position(log_information: dict, log: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         updated log DataFrame  
     """
+    hedge_ratio = 1
+    coin1 = log_information['coin1']
+    coin2 = log_information['coin2']
+
     trade = {}
-    trade['coin1'] = log_information['coin1']
-    trade['coin2'] = log_information['coin2']
+    trade['coin1'] = coin1
+    trade['coin2'] = coin2
     trade['entry_condition'] = log_information['current_condition'] 
     trade['exit_mean'] = log_information['mean']
     
     # redo later when figure out hedge amounts
     coin1_price = log_information['coin1_price']
     coin2_price = log_information['coin2_price']
-    coin1_amt = trade_amt / coin1_price
-    coin2_amt = trade_amt / coin2_price
+
+    coin1_amt, coin2_amt = portfolio_management.trade_amount(coin1, coin2, hedge_ratio, log)
     
     trade['coin1_amt'] = coin1_amt * (log_information['coin1_long'] + (1-log_information['coin1_long'])) / log_information['hedge_ratio']
     trade['coin2_amt'] = coin2_amt * (log_information['coin2_long'] + (1-log_information['coin2_long'])) * log_information['hedge_ratio']
