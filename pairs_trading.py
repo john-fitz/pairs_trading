@@ -118,9 +118,13 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         coin2 = row_info['coin2']
 
         coin1_pricing, coin2_pricing, diff = pairs_helpers.two_coin_pricing(coin1, coin2, full_market_info)
-        current_diff = diff.values[-1]
-        coin1_price = np.exp(coin1_pricing.values[-1])
-        coin2_price = np.exp(coin2_pricing.values[-1])
+        
+        coin1_price = np.exp(full_market_info[full_market_info['coin']==coin1]['log_close'][-1])
+        coin2_price = np.exp(full_market_info[full_market_info['coin']==coin2]['log_close'][-1])
+        current_diff = np.log(coin1_price) - np.log(coin2_price)
+        # current_diff = diff.values[-1]
+        # coin1_price = np.exp(coin1_pricing.values[-1])
+        # coin2_price = np.exp(coin2_pricing.values[-1])
         open_positions.loc[index, 'coin1_price'] = coin1_price
         open_positions.loc[index, 'coin2_price'] = coin2_price
         
@@ -277,6 +281,7 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                     fictional_log = open_position(log_information=row_info, log=fictional_log, test_time=test_time)
         
     # sell
+    # TODO: add logic to check if there is enough money to repurchase portfolio
     i = 0
     for open_positions in [actual_open_positions, fictional_open_positions]:
         fictional = False if i=0 else True
@@ -299,7 +304,7 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                     portfolio[coin1] = (portfolio[coin1][0] + row_info['coin1_amt'], portfolio[coin1][1] + row_info['coin1_amt']*row_info['coin1_price'])
                     portfolio[coin2] = (portfolio[coin2][0] - row_info['coin2_amt'], portfolio[coin2][1] - row_info['coin2_amt']*row_info['coin2_price'])
        
-        portfolio_management.update_portfolio(fictional=fictional, portfolio=portfolio)
+        portfolio_management.save_portfolio(fictional=fictional, portfolio=portfolio)
         i += 1
 
     update_log(log=actual_log, open_positions=actual_open_positions, fictional=False, test_mode=test_mode)
@@ -323,7 +328,6 @@ def is_in_cooldown(coin1: str, coin2: str, fictional_log: pd.DataFrame, test_mod
     closed_badly_individual = closed_indvidual[(closed_indvidual['sell_reason'] == 'stop loss') |((closed_indvidual['sell_reason'] == 'exceeds hold period') & (closed['profit'] < 0))]
     closed_badly = closed[(closed['sell_reason'] == 'stop loss') |((closed['sell_reason'] == 'exceeds hold period') & (closed['profit'] < 0))]
 
-
     if len(closed_badly) == 0:
         return False
     else:
@@ -332,8 +336,6 @@ def is_in_cooldown(coin1: str, coin2: str, fictional_log: pd.DataFrame, test_mod
         within_3_days = (now - last_close) < three_days_in_ms
 
         return within_3_days # or closed_two_stop_losses
-    
-
     
 
 def halt_actual_trading(fictional_log: pd.DataFrame) -> bool:
@@ -447,7 +449,7 @@ def open_position(log_information: dict, log: pd.DataFrame, fictional: bool, tes
             portfolio[coin1] = (portfolio[coin1][0] - coin1_amt, portfolio[coin1][1] - coin1_amt*coin1_price)
             portfolio[coin2] = (portfolio[coin2][0] + coin2_amt, portfolio[coin2][2] + coin2_amt*coin2_price)
         
-        portfolio_management.update_portfolio(fictional=fictional, portfolio=portfolio)
+        portfolio_management.save_portfolio(fictional=fictional, portfolio=portfolio)
         
         return log.append(trade, ignore_index=True)
     else:

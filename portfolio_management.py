@@ -67,7 +67,7 @@ def portfolio_positions(fictional: bool) -> dict:
     return portfolio
 
 
-def update_portfolio(fictional: bool, portfolio: dict) -> None:
+def save_portfolio(fictional: bool, portfolio: dict) -> None:
     """takes the portfolio as a dictionary and saves it as a pickle file"""
     file_name = portfolio_name(fictional=fictional)
     pickle.dump( portfolio, open( file_name, "wb" ) )
@@ -76,3 +76,19 @@ def update_portfolio(fictional: bool, portfolio: dict) -> None:
 def portfolio_name(ficitonal: bool) -> str:
     """returns the proper name (as string) of the portfolio"""
     return "fictional_crypto_positions.p" if fictional else "actual_crypto_positions.p"
+
+
+def update_portfolio_positions(full_market_info: pd.DataFrame, fictional: bool) -> None:
+    """Goes through the portfolio and updates values based on coin prices"""
+    portfolio = portfolio_positions(fictional=fictional)
+
+    for coin in portfolio.keys():
+        try:
+            coin_price = np.exp(log[(log['coin'] == coin)]['log_close'][-1])
+            coin_amt = portfolio[coin][0]
+            portfolio[coin] = (coin1_amt, coin1_amt*coin_price)
+        except:
+            print("can't find information for " + str(coin))
+    save_portfolio(fictional=fictional, portfolio=portfolio)
+
+    return None
