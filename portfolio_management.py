@@ -32,10 +32,6 @@ def trade_amount(coin1: str, coin2: str, hedge_ratio: float, long1: bool) --> Un
     coin1_coin_amt, coin1_dollar_amt = portfolio[coin1]
     coin2_coin_amt, coin2_dollar_amt = portfolio[coin2]
 
-    # if we have no more coin to sell, return (0, 0)
-    # if we are buying more than 90% of our remaining balance, limit to 90% of balance
-
-
     # if we are going long on coin1, the limiting factor is how much of coin2 we have left to sell and cash reserves
     if long1:
         # limiting max trade to 10% of remaining balance
@@ -61,16 +57,22 @@ def trade_amount(coin1: str, coin2: str, hedge_ratio: float, long1: bool) --> Un
 
 
 
-def portfolio_positions() -> dict:
+def portfolio_positions(fictional: bool) -> dict:
     """returns a dataframe with the portfolio"""
     # dictionary is of the form {coin_name: (number_of_coins_owned, dollar_value_of_position)} with the 
     # first entry being {remaining_balance: float}
-    portfolio = pickle.load( open( "crypto_positions.p", "rb" ) )
+    file_name = portfolio_name(fictional=fictional)
+    portfolio = pickle.load( open( file_name, "rb" ) )
     
     return portfolio
 
 
-def update_portfolio(portfolio: dict) -> None:
+def update_portfolio(fictional: bool, portfolio: dict) -> None:
     """takes the portfolio as a dictionary and saves it as a pickle file"""
+    file_name = portfolio_name(fictional=fictional)
+    pickle.dump( portfolio, open( file_name, "wb" ) )
 
-    pickle.dump( portfolio, open( "crypto_positions.p", "wb" ) )
+
+def portfolio_name(ficitonal: bool) -> str:
+    """returns the proper name (as string) of the portfolio"""
+    return "fictional_crypto_positions.p" if fictional else "actual_crypto_positions.p"

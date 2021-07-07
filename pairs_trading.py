@@ -273,21 +273,35 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                         # actual_log = actual_log.append(trade, ignore_index=True)
                     # if len(relevant_fictional_positions) == 0:
                     #     fictional_log = fictional_log.append(trade, ignore_index=True)
-                    actual_log = open_position(log_information=row_info, log=actual_log)
-                    fictional_log = open_position(log_information=row_info, log=fictional_log)
+                    actual_log = open_position(log_information=row_info, log=actual_log, test_time=test_time)
+                    fictional_log = open_position(log_information=row_info, log=fictional_log, test_time=test_time)
         
     # sell
+    i = 0
     for open_positions in [actual_open_positions, fictional_open_positions]:
+        fictional = False if i=0 else True
+        portfolio = portfolio_management.portfolio_positions(fictional=fictional)
+        
         for index, row in open_positions.iterrows():
             row_info = row.to_dict()
             if row_info['suggested_move'] == 'sell':
-                print('closing position for  {} and {}'.format(row_info['coin1'], row_info['coin2']))
-                
+                coin1, coin2 = row_info['coin1'], row_info['coin2']
+                print('closing position for  {} and {}'.format(coin1, coin2))
                 open_positions.loc[index, 'coin1_exit_price'] = row_info['coin1_price']                
                 open_positions.loc[index, 'coin2_exit_price'] = row_info['coin2_price']
                 open_positions.loc[index, 'exit_time'] = test_time if test_mode else round(time.time() * 1000)
                 open_positions.loc[index, 'current_position'] = 'closed'
-                                                                
+                
+                if row_info["coin1_long"]:
+                    portfolio[coin1] = (portfolio[coin1][0] - row_info['coin1_amt'], portfolio[coin1][1] - row_info['coin1_amt']*row_info['coin1_price'])
+                    portfolio[coin2] = (portfolio[coin2][0] + row_info['coin2_amt'], portfolio[coin2][1] + row_info['coin2_amt']*row_info['coin2_price'])
+                else: 
+                    portfolio[coin1] = (portfolio[coin1][0] + row_info['coin1_amt'], portfolio[coin1][1] + row_info['coin1_amt']*row_info['coin1_price'])
+                    portfolio[coin2] = (portfolio[coin2][0] - row_info['coin2_amt'], portfolio[coin2][1] - row_info['coin2_amt']*row_info['coin2_price'])
+       
+        portfolio_management.update_portfolio(fictional=fictional, portfolio=portfolio)
+        i += 1
+
     update_log(log=actual_log, open_positions=actual_open_positions, fictional=False, test_mode=test_mode)
     update_log(log=fictional_log, open_positions=fictional_open_positions, fictional=True, test_mode=test_mode)
 
@@ -374,7 +388,7 @@ def log_name(fictional: bool, test_mode: bool, open_position: bool) -> str:
     return log_title
 
 
-def open_position(log_information: dict, log: pd.DataFrame) -> pd.DataFrame:
+def open_position(log_information: dict, log: pd.DataFrame, fictional: bool, test_time: float) -> pd.DataFrame:
     """takes the row_info dict of information from the log and creates an open position for the trade
 
     Parameters
@@ -404,26 +418,40 @@ def open_position(log_information: dict, log: pd.DataFrame) -> pd.DataFrame:
     coin2_price = log_information['coin2_price']
 
     coin1_amt, coin2_amt = portfolio_management.trade_amount(coin1=coin1, coin2=coin2, hedge_ratio=hedge_ratio, log=log)
-    
-    trade['coin1_amt'] = coin1_amt
-    trade['coin2_amt'] = coin2_amt
-    trade['coin1_long'] = log_information['coin1_long']
-    trade['coin2_long'] = log_information['coin2_long']
-    trade['coin1_entry_price'] = coin1_price
-    trade['coin2_entry_price'] = coin2_price
-    trade['coin1_exit_price'] = None
-    trade['coin2_exit_price'] = None
-    trade['entry_time'] = test_time
-    trade['open_day_count'] = 0
-    trade['exit_time'] = None
-    trade['current_position'] = 'open'
-    trade['profit'] = 0
-    trade['suggested_move'] = 'hold'
-    trade['hedge_ratio'] = log_information['hedge_ratio']
-    trade['sell_reason'] = ""
-    trade['max_loss'] = 0
+    portfolio = portfolio_management.portfolio_positions(fictional=fictional)
 
-    return log.append(trade, ignore_index=True)
+    # confirming that there is something to actually buy and it's not a float rounding error. Min trade value is $1
+    if not(coin1_amt*coin1_price <= 1 or coin2_amt*coin2_price <= 1):
+        trade['coin1_amt'] = coin1_amt
+        trade['coin2_amt'] = coin2_amt
+        trade['coin1_long'] = log_information['coin1_long']
+        trade['coin2_long'] = log_information['coin2_long']
+        trade['coin1_entry_price'] = coin1_price
+        trade['coin2_entry_price'] = coin2_price
+        trade['coin1_exit_price'] = None
+        trade['coin2_exit_price'] = None
+        trade['entry_time'] = test_time
+        trade['open_day_count'] = 0
+        trade['exit_time'] = None
+        trade['current_position'] = 'open'
+        trade['profit'] = 0
+        trade['suggested_move'] = 'hold'
+        trade['hedge_ratio'] = log_information['hedge_ratio']
+        trade['sell_reason'] = ""
+        trade['max_loss'] = 0
+
+        if log_information['coin1_long']:
+            portfolio[coin1] = (portfolio[coin1][0] + coin1_amt, portfolio[coin1][1] + coin1_amt*coin1_price)
+            portfolio[coin2] = (portfolio[coin2][0] - coin2_amt, portfolio[coin2][2] - coin2_amt*coin2_price)
+        else:
+            portfolio[coin1] = (portfolio[coin1][0] - coin1_amt, portfolio[coin1][1] - coin1_amt*coin1_price)
+            portfolio[coin2] = (portfolio[coin2][0] + coin2_amt, portfolio[coin2][2] + coin2_amt*coin2_price)
+        
+        portfolio_management.update_portfolio(fictional=fictional, portfolio=portfolio)
+        
+        return log.append(trade, ignore_index=True)
+    else:
+        return log
 
 def close_position(coin1: str, coin2: str):
     # TODO - build logic to open positions
