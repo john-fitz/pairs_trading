@@ -28,36 +28,35 @@ def trade_amount(coin1: str, coin2: str, hedge_ratio: float, long1: bool, fictio
         dollar values of coin1 and coin2 to purchase / sell, respectively
     """
     portfolio = portfolio_positions(fictional=fictional)
-    
-    remaining_balance = portfolio['balance']
-    max_budget = 0.90 * remaining_balance # trying not to exhaust all money due to slippage
+    max_budget = 0.90 * portfolio['balance'] # trying not to exhaust all money due to slippage
     coin1_coin_amt, coin1_dollar_amt = portfolio[coin1]
     coin2_coin_amt, coin2_dollar_amt = portfolio[coin2]
+    # print(f"trade_amt initial balance: {portfolio['balance']}, coin1_dollar_amt: {coin1_dollar_amt}, coin2_dollar_amt: {coin2_dollar_amt}")
 
     # if we are going long on coin1, the limiting factor is how much of coin2 we have left to sell and cash reserves
     if long1:
         # limiting max trade to 10% of remaining balance
-        coin2_dollar_amt *= 0.10
+        coin2_min_amount = coin2_dollar_amt * 0.10
         # just for wiggle room, we leave 10% of balance in reserves
         if coin2_dollar_amt * hedge_ratio >= max_budget:
             min_amt = max_budget
         else:
-            min_amt = coin2_dollar_amt
+            min_amt = coin2_min_amount
     else:
         # limiting max trade to 10% of remaining balance
-        coin1_dollar_amt *= 0.10
+        coin1_min_amt = coin1_dollar_amt * 0.10
         # just for wiggle room, we leave 10% of balance in reserves
         if coin1_dollar_amt >= max_budget:
             min_amt = max_budget
         else:
-            min_amt = coin1_dollar_amt
-    if coin1_dollar_amt ==0 or coin2_dollar_amt == 0:
+            min_amt = coin1_min_amt
+            
+    if coin1_dollar_amt == 0 or coin2_dollar_amt == 0:
         return (0, 0)
     coin1_amt = (min_amt / coin1_dollar_amt) * coin1_coin_amt
-    coin2_amt = (min_amt / coin2_dollar_amt) * coin1_coin_amt * hedge_ratio
-
+    coin2_amt = (min_amt / coin2_dollar_amt) * coin2_coin_amt * hedge_ratio
+    # print(f"trade_amt final balance: {portfolio['balance']}, coin1_dollar_amt: {coin1_dollar_amt}, coin2_dollar_amt: {coin2_dollar_amt}")
     return (coin1_amt, coin2_amt)
-
 
 
 def portfolio_positions(fictional: bool) -> dict:
@@ -122,8 +121,9 @@ def purchase_initial_position(coin_pairs: str, market_info: pd.DataFrame) -> Non
                 print(f"adding ${DEFAULT_PURCHASE_AMT} of {coin} to {'fictional' if fictional else 'actual'} portfolio")
                 # print(len(market_info[market_info['coin'] == coin]['close']))
                 coin_price = market_info[market_info['coin'] == coin]['close'].iloc[-1]
-                portfolio[coin] = (DEFAULT_PURCHASE_AMT / coin_price, coin_price)
-                portfolio['balance'] -= DEFAULT_PURCHASE_AMT
+                portfolio[coin] = (DEFAULT_PURCHASE_AMT / coin_price, DEFAULT_PURCHASE_AMT)
+                # portfolio['balance'] -= DEFAULT_PURCHASE_AMT
+                # print(f"portfolio balance: {portfolio['balance']}")
         save_portfolio(fictional=fictional, portfolio=portfolio)
         fictional=True
 

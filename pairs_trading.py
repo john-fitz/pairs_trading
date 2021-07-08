@@ -45,14 +45,18 @@ def potential_trades_status(coin_pairs: list, df: pd.DataFrame) -> pd.DataFrame:
     potential_trades = pd.DataFrame(columns = potential_trades_columns)
 
     for coin_pair in coin_pairs:
+        coin1 = coin_pair[0]
+        coin2 = coin_pair[1]
         row_vals = {}
-        row_vals['coin1'] = coin_pair[0]
-        row_vals['coin2'] = coin_pair[1]
+        row_vals['coin1'] = coin1
+        row_vals['coin2'] = coin2
 
-        coin1_pricing, coin2_pricing, diff = pairs_helpers.two_coin_pricing(coin_pair[0], coin_pair[1], df)
+        _, _, diff = pairs_helpers.two_coin_pricing(coin1, coin2, df)
         current_diff = diff.values[-1]
-        row_vals['coin1_price'] = np.exp(coin1_pricing.values[-1])
-        row_vals['coin2_price'] = np.exp(coin2_pricing.values[-1])
+        row_vals['coin1_price'] = df[df['coin'] == coin1]['close'].iloc[-1]
+        row_vals['coin2_price'] = df[df['coin'] == coin2]['close'].iloc[-1]
+        # row_vals['coin1_price'] = np.exp(coin1_pricing.values[-1])
+        # row_vals['coin2_price'] = np.exp(coin2_pricing.values[-1])
 
         mean = np.mean(diff)
         stdev = np.std(diff, ddof=1)
@@ -123,8 +127,10 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         # coin2_price = full_market_info[full_market_info['coin']==coin2]['close'].iloc[-1]
         # current_diff = coin1_price - coin2_price
         current_diff = diff.values[-1]
-        coin1_price = np.exp(coin1_pricing.values[-1])
-        coin2_price = np.exp(coin2_pricing.values[-1])
+        coin1_price = full_market_info[full_market_info['coin'] == coin1]['close'].iloc[-1]
+        coin2_price = full_market_info[full_market_info['coin'] == coin2]['close'].iloc[-1]
+        # coin1_price = np.exp(coin1_pricing.values[-1])
+        # coin2_price = np.exp(coin2_pricing.values[-1])
         open_positions.loc[index, 'coin1_price'] = coin1_price
         open_positions.loc[index, 'coin2_price'] = coin2_price
         
@@ -141,6 +147,8 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         open_positions.loc[index, 'profit'] = current_profit
         if current_profit < row_info['max_loss']:
             open_positions.loc[index, 'max_loss'] = current_profit
+
+        stop_loss = current_profit < -0.07 * start_value
         
         # if not cointegratred anymore, we shouldn't hold onto it
         relevant_positions1 = potential_buys[((potential_buys['coin1'] == coin1) & (potential_buys['coin2'] == coin2))]
@@ -151,13 +159,13 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         # need to identify positive if crosses back over threshold (entry_condition)
         condition = 'above' if current_diff >= row_info['exit_mean'] else 'below'
         
-        if open_days >= 10 or current_profit < -0.07*start_value or row_info['entry_condition'] != condition: #or not_cointegrated:
+        if open_days >= 10 or stop_loss or row_info['entry_condition'] != condition: #or not_cointegrated:
             open_positions.loc[index, 'suggested_move'] = 'sell'
 
             if open_days >= 10:
                 open_positions.loc[index, 'sell_reason'] = 'exceeds hold period'
 
-            elif current_profit < -0.07*start_value:
+            elif stop_loss:
                 open_positions.loc[index, 'sell_reason'] = 'stop loss'
 
             elif row_info['entry_condition'] != condition:
@@ -302,9 +310,12 @@ def pseudo_trade(actual_log: pd.DataFrame, fictional_log: pd.DataFrame, potentia
                 if row_info["coin1_long"]:
                     portfolio[coin1] = (portfolio[coin1][0] - row_info['coin1_amt'], portfolio[coin1][1] - row_info['coin1_amt']*row_info['coin1_price'])
                     portfolio[coin2] = (portfolio[coin2][0] + row_info['coin2_amt'], portfolio[coin2][1] + row_info['coin2_amt']*row_info['coin2_price'])
+                    # selling coin1 and buying coin2
+                    portfolio['balance'] = portfolio['balance'] + row_info['coin1_amt']*row_info['coin1_price'] - row_info['coin2_amt']*row_info['coin2_price']
                 else: 
                     portfolio[coin1] = (portfolio[coin1][0] + row_info['coin1_amt'], portfolio[coin1][1] + row_info['coin1_amt']*row_info['coin1_price'])
                     portfolio[coin2] = (portfolio[coin2][0] - row_info['coin2_amt'], portfolio[coin2][1] - row_info['coin2_amt']*row_info['coin2_price'])
+                    portfolio['balance'] = portfolio['balance'] - row_info['coin1_amt']*row_info['coin1_price'] + row_info['coin2_amt']*row_info['coin2_price']
        
         portfolio_management.save_portfolio(fictional=fictional, portfolio=portfolio)
         fictional = True
@@ -423,9 +434,10 @@ def open_position(log_information: dict, log: pd.DataFrame, fictional: bool, tes
 
     coin1_amt, coin2_amt = portfolio_management.trade_amount(coin1=coin1, coin2=coin2, hedge_ratio=hedge_ratio, long1=log_information['coin1_long'], fictional=fictional)
     portfolio = portfolio_management.portfolio_positions(fictional=fictional)
+    # print(f"open position intial balance: ${portfolio['balance']}")
 
     # confirming that there is something to actually buy and it's not a float rounding error. Min trade value is $1
-    if not(coin1_amt*coin1_price <= 1 or coin2_amt*coin2_price <= 1):
+    if not(coin1_amt == 0 or coin2_amt == 0):
         trade['coin1_amt'] = coin1_amt
         trade['coin2_amt'] = coin2_amt
         trade['coin1_long'] = log_information['coin1_long']
@@ -444,13 +456,22 @@ def open_position(log_information: dict, log: pd.DataFrame, fictional: bool, tes
         trade['sell_reason'] = ""
         trade['max_loss'] = 0
 
+        coin1_coin_amt, coin1_dollar_amt = portfolio[coin1]
+        coin2_coin_amt, coin2_dollar_amt = portfolio[coin2]
+
         if log_information['coin1_long']:
-            portfolio[coin1] = (portfolio[coin1][0] + coin1_amt, portfolio[coin1][1] + coin1_amt*coin1_price)
-            portfolio[coin2] = (portfolio[coin2][0] - coin2_amt, portfolio[coin2][1] - coin2_amt*coin2_price)
+            portfolio[coin1] = (coin1_coin_amt + coin1_amt, coin1_dollar_amt + coin1_amt*coin1_price)
+            portfolio[coin2] = (coin2_coin_amt - coin2_amt, coin2_dollar_amt - coin2_amt*coin2_price)
+            # portfolio[coin2] = (portfolio[coin2][0] - coin2_amt, portfolio[coin2][1] - coin2_amt*coin2_price)
+            # buy coin1 and sell coin2
+            # portfolio['balance'] = portfolio['balance'] - coin1_amt*coin1_price + coin2_amt*coin2_price
         else:
-            portfolio[coin1] = (portfolio[coin1][0] - coin1_amt, portfolio[coin1][1] - coin1_amt*coin1_price)
-            portfolio[coin2] = (portfolio[coin2][0] + coin2_amt, portfolio[coin2][1] + coin2_amt*coin2_price)
-        
+            portfolio[coin1] = (coin1_coin_amt - coin1_amt, coin1_dollar_amt - coin1_amt*coin1_price)
+            portfolio[coin2] = (coin2_coin_amt + coin2_amt, coin2_dollar_amt + coin2_amt*coin2_price)
+            # portfolio[coin1] = (portfolio[coin1][0] - coin1_amt, portfolio[coin1][1] - coin1_amt*coin1_price)
+            # portfolio[coin2] = (portfolio[coin2][0] + coin2_amt, portfolio[coin2][1] + coin2_amt*coin2_price)
+            # portfolio['balance'] = portfolio['balance'] + coin1_amt*coin1_price - coin2_amt*coin2_price
+        # print(f"open position final balance: ${portfolio['balance']}")
         portfolio_management.save_portfolio(fictional=fictional, portfolio=portfolio)
         
         return log.append(trade, ignore_index=True)
