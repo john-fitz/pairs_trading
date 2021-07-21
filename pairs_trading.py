@@ -51,28 +51,36 @@ def potential_trades_status(coin_pairs: list, df: pd.DataFrame) -> pd.DataFrame:
         row_vals['coin1'] = coin1
         row_vals['coin2'] = coin2
 
-        _, _, diff = pairs_helpers.two_coin_pricing(coin1, coin2, df)
-        current_diff = diff.values[-1]
+        coin1_pricing, coin2_pricing, diff = pairs_helpers.two_coin_pricing(coin1, coin2, df)
+        # current_diff = diff.values[-1]
+        coin1_pricing_actual = 10 ** coin1_pricing
+        coin2_pricing_actual = 10 ** coin2_pricing
+        diff_actual = coin1_pricing_actual.subtract(coin2_pricing_actual)
         row_vals['coin1_price'] = df[df['coin'] == coin1]['close'].iloc[-1]
         row_vals['coin2_price'] = df[df['coin'] == coin2]['close'].iloc[-1]
         # row_vals['coin1_price'] = np.exp(coin1_pricing.values[-1])
         # row_vals['coin2_price'] = np.exp(coin2_pricing.values[-1])
 
-        mean = np.mean(diff)
-        stdev = np.std(diff, ddof=1)
+        current_diff = diff_actual.values[-1]
+        # mean = 10 ** np.mean(diff)
+        # stdev = 10 ** np.std(diff, ddof=1)
+        mean = np.mean(diff_actual)
+        stdev = np.std(diff_actual, ddof=1)
         row_vals['mean'] = mean
         row_vals['stdev'] = stdev
 
         # if the difference is greater than 1 std but less than 2, we should trade on it
-        row_vals['coin1_long'] = current_diff >= (mean + stdev) #and current_diff < 2*(mean + stdev) 
-        row_vals['coin2_long'] = current_diff <= (mean - stdev) #and current_diff > 2*(mean - stdev)
+        # TODO TEMPORARILY SWAPPING THE SIGNS FOR LONG AND SHORT
+        row_vals['coin1_long'] = current_diff <= (mean + stdev) #and current_diff < 2*(mean + stdev) 
+        row_vals['coin2_long'] = current_diff >= (mean - stdev) #and current_diff > 2*(mean - stdev)
         # if row_vals['coin1_long'] or row_vals['coin2_long']:
         #     print(f"current diff: {current_diff}, mean: {mean}, std: {stdev}")
         #     if row_vals['coin1_long']:
         #         print(f"going long {row_vals['coin1']} because {current_diff} > {(mean + stdev)}")
         #     else:
         #         print(f"going long {row_vals['coin2']} because {current_diff} < {(mean - stdev)}")
-        row_vals['current_condition'] = 'above' if current_diff >= mean else 'below'
+        
+        row_vals['current_condition'] = 'above' if current_diff <= mean else 'below'
         
         #TODO - CALCULATE HEDGE RATIOS - defined in regards to coin1 vs coin2
         row_vals['hedge_ratio'] = 1
@@ -126,7 +134,11 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         # coin1_price = full_market_info[full_market_info['coin']==coin1]['close'].iloc[-1]
         # coin2_price = full_market_info[full_market_info['coin']==coin2]['close'].iloc[-1]
         # current_diff = coin1_price - coin2_price
-        current_diff = diff.values[-1]
+        # current_diff = diff.values[-1]
+        coin1_pricing_actual = 10 ** coin1_pricing
+        coin2_pricing_actual = 10 ** coin2_pricing
+        diff_actual = coin1_pricing_actual.subtract(coin2_pricing_actual)
+        current_diff = diff_actual.values[-1]
         coin1_price = full_market_info[full_market_info['coin'] == coin1]['close'].iloc[-1]
         coin2_price = full_market_info[full_market_info['coin'] == coin2]['close'].iloc[-1]
         # coin1_price = np.exp(coin1_pricing.values[-1])
@@ -148,7 +160,7 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         if current_profit < row_info['max_loss']:
             open_positions.loc[index, 'max_loss'] = current_profit
 
-        stop_loss = current_profit < -0.07 * start_value
+        stop_loss = current_profit < -0.5 * start_value
         
         # if not cointegratred anymore, we shouldn't hold onto it
         relevant_positions1 = potential_buys[((potential_buys['coin1'] == coin1) & (potential_buys['coin2'] == coin2))]
@@ -157,16 +169,19 @@ def update_open_positions(log: pd.DataFrame, potential_buys: pd.DataFrame, full_
         not_cointegrated = len(relevant_positions1) + len(relevant_positions2) == 0 
         
         # need to identify positive if crosses back over threshold (entry_condition)
-        condition = 'above' if current_diff >= row_info['exit_mean'] else 'below'
+        # TODO: TEMPORARILY SWAPPING THINGS
+        condition = 'above' if current_diff <= row_info['exit_mean'] else 'below'
+        if condition != row_info['entry_condition']:
+            print(f"changing condition from {condition} to {row_info['entry_condition']}")
         
-        if open_days >= 10 or stop_loss or row_info['entry_condition'] != condition: #or not_cointegrated:
+        if open_days >= 10 or row_info['entry_condition'] != condition: # or stop_loss or not_cointegrated:
             open_positions.loc[index, 'suggested_move'] = 'sell'
 
             if open_days >= 10:
                 open_positions.loc[index, 'sell_reason'] = 'exceeds hold period'
 
-            elif stop_loss:
-                open_positions.loc[index, 'sell_reason'] = 'stop loss'
+            # elif stop_loss:
+            #     open_positions.loc[index, 'sell_reason'] = 'stop loss'
 
             elif row_info['entry_condition'] != condition:
                 open_positions.loc[index, 'sell_reason'] = 'mean reverted'
