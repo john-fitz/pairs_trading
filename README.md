@@ -16,10 +16,13 @@ Overall, it was an interesting project and I learned a lot about how to build a 
 If you want to try out the project (which I suggest poking around a little before you run it), feel free to download the files and most of the logic is run through bot_script.py except for the historical information which is downloaded and saved in a CSV file using the create_and_save_historicals function in pairs_helpers.py. Once you have that, you can run the backtesting by opening terminal, navigating to the project file, and typing "python bot_script.py". It takes up a lot of processing power and memory to run it because it's testing and recompiling lists of potential trades every hour, so I've tried to optimize it at different times to cut down on backtesting time and there are a lot of CSV files that are created and saved in the process. I suggest checking out past commits to see which steps you need to take in order to get it running properly. 
 
 
+### Acknowledgements
+s/o to [Anna Xu](https://github.com/annasxu/) for getting me interested in building a crypto trading project and answering my questions
+
 ### License
 MIT License
 
-Copyright (c) [year] [fullname]
+Copyright (c) [2021] [John Fitzpatrick]
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
