@@ -11,3 +11,25 @@ I found minor bugs (that I hopefully fixed most of) and it performed moderately 
 Overall, it was an interesting project and I learned a lot about how to build a piece of software as large and complicated as it was. For those wondering in case they wanted to build something similar: the approximate  breakdown for me to build this was 15% pairs trading/stats knowledge, 70% software engineering, 10% general finance knowledge, 5% banging my head against a wall.
 
 If you want to try out the project (which I suggest poking around a little before you run it), feel free to download the files and most of the logic is run through bot_script.py except for the historical information which is downloaded and saved in a CSV file using the create_and_save_historicals function in pairs_helpers.py. Once you have that, you can run the backtesting by opening terminal, navigating to the project file, and typing "python bot_script.py". It takes up a lot of processing power and memory to run it because it's testing and recompiling lists of potential trades every hour, so I've tried to optimize it at different times to cut down on backtesting time and there are a lot of CSV files that are created and saved in the process. I suggest checking out past commits to see which steps you need to take in order to get it running properly. 
+
+MIT License
+
+Copyright (c) [year] [fullname]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
